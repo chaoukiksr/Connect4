@@ -22,8 +22,8 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
 
                <!-- 0 Players -->
-               <button @click="formData.gameMode = '0player'"
-                  :class="formData.gameMode === '0player' ? 'bg-emerald-50 border-2 border-emerald-500 shadow-md' : 'bg-white hover:bg-emerald-50 border-2 border-gray-300 hover:border-emerald-500'"
+               <button @click="formData.gameMode = '0'"
+                  :class="formData.gameMode === '0' ? 'bg-emerald-50 border-2 border-emerald-500 shadow-md' : 'bg-white hover:bg-emerald-50 border-2 border-gray-300 hover:border-emerald-500'"
                   class=" rounded-xl p-4 transition-all">
                   <div class="text-2xl mb-2">🤖</div>
                   <div class="font-bold text-gray-800">0 Joueurs</div>
@@ -31,8 +31,8 @@
                </button>
 
                <!-- 1 Player -->
-               <button @click="formData.gameMode = '1player'"
-                  :class="formData.gameMode === '1player' ? 'bg-emerald-50 border-2 border-emerald-500 shadow-md' : 'bg-white hover:bg-emerald-50 border-2 border-gray-300 hover:border-emerald-500'"
+               <button @click="formData.gameMode = '1'"
+                  :class="formData.gameMode === '1' ? 'bg-emerald-50 border-2 border-emerald-500 shadow-md' : 'bg-white hover:bg-emerald-50 border-2 border-gray-300 hover:border-emerald-500'"
                   class=" rounded-xl p-4 transition-all">
                   <div class="text-2xl mb-2">👤</div>
                   <div class="font-bold text-gray-800">1 Joueur</div>
@@ -40,8 +40,8 @@
                </button>
 
                <!-- 2 Players -->
-               <button @click="formData.gameMode = '2players'"
-                  :class="formData.gameMode === '2players' ? 'bg-emerald-50 border-2 border-emerald-500 shadow-md' : 'bg-white hover:bg-emerald-50 border-2 border-gray-300 hover:border-emerald-500'"
+               <button @click="formData.gameMode = '2'"
+                  :class="formData.gameMode === '2' ? 'bg-emerald-50 border-2 border-emerald-500 shadow-md' : 'bg-white hover:bg-emerald-50 border-2 border-gray-300 hover:border-emerald-500'"
                   class=" rounded-xl p-4 transition-all">
                   <div class="text-2xl mb-2">👥</div>
                   <div class="font-bold text-gray-800">2 Joueurs</div>
@@ -177,6 +177,8 @@ import { reactive, useModel } from 'vue';
 
    const startGame = () => {
    //data validation
+   
+   
    if (formData.rows < 4 || formData.columns < 4) {
       console.log("la grille doit avoir au moin 4 ligne et 4 column");
       alert('la grille doit avoir au moin 4 ligne et 4 column')

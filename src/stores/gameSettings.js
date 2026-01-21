@@ -4,7 +4,7 @@ import {ref} from 'vue'
 export const useGameSettingsStore = defineStore('gameSettings',()=>{
       const gameMode = ref(1) //default
       const startingPlayer= ref('red')
-      const boardSize = ref({rows:8, cols:9})
+      const boardSize = ref({rows:5, cols:6})
      
       const aiMode = ref('minimax') 
       const aiDepth = ref(5)
@@ -22,7 +22,11 @@ export const useGameSettingsStore = defineStore('gameSettings',()=>{
       if (settings.aiMode) aiMode.value = settings.aiMode
       if (settings.aiDepth !== undefined) aiDepth.value = settings.aiDepth
       console.log('settings are set in the store')
+      console.log('settings recieved from the user: ',settings);
+      
    }
+   console.log(gameMode.value,' ',
+      boardSize.value);
      
       return {
          gameMode,

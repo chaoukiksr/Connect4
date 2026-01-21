@@ -2,8 +2,11 @@
    <!-- Board Container -->
    <div class="bg-white ">
 
-      <!-- Game Grid: 8 rows x 9 columns -->
-      <div class="grid grid-cols-9 gap-2">
+      <!-- Game Grid: dynamic rows x cols -->
+      <div 
+         class="grid gap-2" 
+         :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
+      >
 
          <!-- UNE SEULE CELLULE - Exemple à répéter avec v-for -->
          <Cell v-for="a in totalCells" :key="a" :col="Math.floor((a - 1) % cols)" :row="Math.floor((a - 1) / cols)" :boardValue="board[Math.floor((a - 1)/cols)][Math.floor((a - 1) % cols)]" @cell-clicked="fillColumn" />

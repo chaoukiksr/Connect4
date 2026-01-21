@@ -1,5 +1,5 @@
 <template>
-   <div @click="$emit('load', game.gameId)"
+   <div @click="$emit('load', game.id)"
       class="bg-white rounded-xl p-8 cursor-pointer shadow-lg border border-gray-100 hover:border-emerald-400 transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl">
 
       <div class="flex items-center justify-between mb-4">
@@ -11,27 +11,28 @@
          </span>
       </div>
 
-      <h3 class="text-xl font-bold text-gray-800 mb-2">{{ game.gameId }}</h3>
+      <h3 class="text-xl font-bold text-gray-800 mb-2">{{ game.id }}</h3>
 
       <p class="text-sm text-gray-500 mb-1">
          {{ getGameModeText(game.settings?.gameMode) }}
       </p>
 
-      <p class="text-xs text-gray-400">{{ formatDate(game.lastModified) }}</p>
+    //  <p class="text-xs text-gray-400">{{ formatDate(game.lastModified) }}</p>
 
-      <button @click.stop="$emit('delete', game.gameId)" class="mt-2 text-xs text-red-500 hover:text-red-700">
+      <button @click.stop="$emit('delete', game.id)" class="mt-2 text-xs text-red-500 hover:text-red-700">
          🗑️ Supprimer
       </button>
    </div>
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
    game: {
       type: Object,
       required: true
    }
 });
+console.log(props.game);
 
 defineEmits(['load', 'delete']);
 

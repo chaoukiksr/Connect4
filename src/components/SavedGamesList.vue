@@ -13,11 +13,11 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
          <!-- Game Cards -->
-         <SavedGameCard v-for="game in games" :key="game.gameId" :game="game" @load="$emit('load-game', $event)"
+         <SavedGameCard v-for="game in validGames" :key="game.id" :game="game" @load="$emit('load-game', $event)"
             @delete="$emit('delete-game', $event)" />
 
          <!-- No games message -->
-         <div v-if="games.length === 0" class="col-span-full text-center py-12">
+         <div v-if="validGames.length === 0" class="col-span-full text-center py-12">
             <p class="text-gray-400 text-lg">Aucune partie sauvegardée</p>
             <p class="text-gray-300 text-sm mt-2">Commencez une nouvelle partie et sauvegardez-la !</p>
          </div>
@@ -27,15 +27,19 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import SavedGameCard from './SavedGameCard.vue';
 
-defineProps({
+const props = defineProps({
    games: {
       type: Array,
       required: true,
       default: () => []
    }
 });
+
+// Filter out null/undefined games
+const validGames = computed(() => (props.games|| []).filter(game => game != null));
 
 defineEmits(['load-game', 'delete-game']);
 </script>

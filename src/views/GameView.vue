@@ -93,17 +93,20 @@ import { useGameStateStore } from '../stores/gameState';
 import { useGameSettingsStore } from '../stores/gameSettings';
 import { storeToRefs } from 'pinia'
 import Board from '../components/Board.vue';
+import { useFileManagement } from '../composables/useFileManagement'
+import { useGame } from '../composables/useGame'
 
-
+const { download,save } = useFileManagement()
+const { startGame } = useGame()
 const gameSettingsStore = useGameSettingsStore();
 const gameStateStore = useGameStateStore();
 
 // State (reactive refs)
 const { aiDepth, aiMode, boardSize, gameMode, startingPlayer } = storeToRefs(gameSettingsStore)
-const { board, currentPlayer, gameStatus, winner,moveHistory,historyIndex } = storeToRefs(gameStateStore)
+const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex } = storeToRefs(gameStateStore)
 
 // Actions (functions) - don't use storeToRefs for these
-const { resetGame, setCurrentPlayer, setGameStatus, setWinner,undo,redo } = gameStateStore
+const { resetGame, setCurrentPlayer, setGameStatus, setWinner, undo, redo } = gameStateStore
 
 
 
@@ -121,6 +124,8 @@ const redoMove = () =>{
 const toggleGameStatus = () => {
    if (gameStatus.value === 'start') {
       gameStatus.value = 'playing'
+      // If first player is AI, start AI move
+      startGame();
    } else if (gameStatus.value === 'playing') {
       gameStatus.value = 'paused'
    } else {
@@ -132,29 +137,10 @@ const restartGame = () => {
    resetGame();
 }
 const downloadGame = () =>{
-   const data = {
-      "gameStatus": gameStatus.value,
-      "currentPlayer": currentPlayer.value,
-      "winner": winner.value,
-      "board": board.value,
-      "history":moveHistory.value,
-      "historyIndex":historyIndex.value,
-      "aiDepth":aiDepth.value,
-      "aiMode": aiMode.value,
-      "boardSize": boardSize.value,
-      "gameMode": gameMode.value,
-      "startingPlayer": startingPlayer.value
-   }
+   download()
+}
 
-   const json = JSON.stringify(data, null, 2);
-   const blob = new Blob([json], { type: 'application/json' })
-
-   const url = URL.createObjectURL(blob);
-   const a = document.createElement('a');
-   a.href = url;
-   a.download = "connect4Game.json";
-   a.click();
-
-   URL.revokeObjectURL(url);
+const saveGame = ()=>{
+   save()
 }
 </script>

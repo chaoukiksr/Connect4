@@ -1,69 +1,89 @@
-import { useGameSettingsStore, } from "../stores/gameSettings" 
+import { useGameSettingsStore } from "../stores/gameSettings" 
 import { useGameStateStore } from "../stores/gameState"
-import {storeToRefs} from 'pinia'
+import { storeToRefs } from 'pinia'
 import { useWinCheck } from "./useWinCheck";
-export function useGame(){
+import { useGameFlow } from './useGameFlow'
+
+export function useGame() {
+   const { isCurrentPlayerAI, triggerAIMove } = useGameFlow();
    const gameSettingsStore = useGameSettingsStore();
    const gameStateStore = useGameStateStore();
    const { 
       aiDepth,
-       aiMode,
-        boardSize,
-         gameMode,
-          startingPlayer
-          } = storeToRefs(gameSettingsStore)
+      aiMode,
+      boardSize,
+      gameMode,
+      startingPlayer
+   } = storeToRefs(gameSettingsStore)
 
-   const { board,
-       currentPlayer,
-        gameStatus,
-            winner,
-            moveHistory,
-            historyIndex
-              } = storeToRefs(gameStateStore)
+   const { 
+      board,
+      currentPlayer,
+      gameStatus,
+      winner,
+      moveHistory,
+      historyIndex
+   } = storeToRefs(gameStateStore)
 
-const { setWinner, resetGame, setCurrentPlayer, setGameStatus, addMove} = gameStateStore;
-const {checkProbableWin} = useWinCheck()
-   const isColAvailable = (col) =>{
-      return board.value[0][col] == 0;
+   const { setWinner, resetGame, setCurrentPlayer, setGameStatus, addMove } = gameStateStore;
+   const { checkProbableWin } = useWinCheck()
+
+   const isColAvailable = (col) => {
+      return board.value[0][col] === 0;
    }
-   const getAvailableCol = () =>{
+
+   const getAvailableCol = () => {
       const availableCols = []
-      for(let i=0;i<boardSize.value.cols;i++){
-         if(isColAvailable(i)){
+      for (let i = 0; i < boardSize.value.cols; i++) {
+         if (isColAvailable(i)) {
             availableCols.push(i);
          }
       }
       return availableCols
    }
-   const fillCol=(col) =>{
-      if (gameStatus.value != "playing") return;
-      if(getAvailableCol().length ==0){
-         gameStatus.value == "finished"
+
+   const fillCol = (col) => {
+      if (gameStatus.value !== "playing") return;
+      
+      if (getAvailableCol().length === 0) {
+         setGameStatus("finished")
          console.log('Board is full, the game is finished');
-         console.log(getAvailableCol);
-         
          return;
       }
-      if(!isColAvailable(col)){
+      
+      if (!isColAvailable(col)) {
          console.log('column is not available');
          return;
       }
-      for(let i=boardSize.value.rows - 1;i>=0;i--){
-         if(board.value[i][col] == 0){
+
+      // Place the piece
+      for (let i = boardSize.value.rows - 1; i >= 0; i--) {
+         if (board.value[i][col] === 0) {
             board.value[i][col] = currentPlayer.value
-            addMove(i,col, currentPlayer.value)
-            checkProbableWin(i,col,currentPlayer.value)
-            currentPlayer.value = currentPlayer.value == 1 ? 2 : 1 ;
-            console.log('col is filled from composer');
-            console.log('move history: ', moveHistory.value);
-            console.log('history index: ', historyIndex.value);
+            addMove(i, col, currentPlayer.value)
+            checkProbableWin(i, col, currentPlayer.value)
             
-            console.log(board.value);
-            break
+            // Switch player
+            currentPlayer.value = currentPlayer.value === 1 ? 2 : 1;
+            
+            console.log('col is filled, current player now:', currentPlayer.value);
+
+            // Check if next player is AI, trigger AI move
+            if (gameStatus.value === 'playing' && isCurrentPlayerAI()) {
+               triggerAIMove(fillCol);  // Pass fillCol as callback to avoid circular import
+            }
+            break;
          }
       }
-
    }
-   
-   return {fillCol}
+
+   // Start game - call this when game status changes to 'playing'
+   const startGame = () => {
+      // If first player is AI (mode 0, or mode 1 with AI starting), trigger AI
+      if (isCurrentPlayerAI()) {
+         triggerAIMove(fillCol);
+      }
+   }
+
+   return { fillCol, isColAvailable, getAvailableCol, startGame }
 }
