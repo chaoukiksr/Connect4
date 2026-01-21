@@ -11,9 +11,9 @@ export function useFileManagement () {
       ,winner
    } = storeToRefs(gameStateStore)
    
-   // Helper to get current game data (called when needed, not at init time)
+   
    const getGameData = (id = null) => ({
-      'id': id ?? Date.now(), // Use timestamp for unique ID
+      'id': id ?? Date.now(), 
       "gameStatus": gameStatus.value,
       "currentPlayer": currentPlayer.value,
       "winner": winner.value,
@@ -85,18 +85,9 @@ export function useFileManagement () {
       reader.readAsText(file);
    }
    const save = ()=>{
-      const data = getGameData(); // Get CURRENT game state
+      const data = getGameData();
       const existingGames = JSON.parse(localStorage.getItem('games')) || [];
-      
-   
-      const gameIndex = existingGames.findIndex(g => g && g.id === data.id);
-      if (gameIndex >= 0) {
-         existingGames[gameIndex] = data;
-      } else {
-         existingGames.push(data);
-      }
-      
-      
+      existingGames.push(data);
       localStorage.setItem('games', JSON.stringify(existingGames));
       console.log('Game saved successfully');
    }

@@ -37,24 +37,38 @@ export function useGameFlow() {
    }
 
    // Trigger AI move with delay
-   const triggerAIMove = (fillColCallback) => {
+   // fillColCallback is optional - can be passed from useGame to avoid circular dependency
+   let fillColCallback = null;
+   
+   const setFillColCallback = (callback) => {
+      fillColCallback = callback;
+   };
+   
+   const triggerAIMove = (callback) => {
+      const actualCallback = callback || fillColCallback;
       if (!isCurrentPlayerAI()) return;
       if (gameStatus.value !== 'playing') return;
+      if (!actualCallback) {
+         console.error('No fillCol callback provided for AI move');
+         return;
+      }
 
       setTimeout(() => {
+         if (gameStatus.value !== 'playing') return; // Re-check after delay
          const aiCol = calculateCol();
          if (aiCol >= 0) {
-            fillColCallback(aiCol);
+            actualCallback(aiCol);
          }
       }, 750);
    }
 
    // Start AI vs AI game loop
-   const startAIvsAI = (fillColCallback) => {
+   const startAIvsAI = (callback) => {
+      const actualCallback = callback || fillColCallback;
       if (gameMode.value !== 0) return;
       if (gameStatus.value !== 'playing') return;
-      triggerAIMove(fillColCallback);
+      triggerAIMove(actualCallback);
    }
 
-   return { isCurrentPlayerAI, triggerAIMove, startAIvsAI, placePiece }
+   return { isCurrentPlayerAI, triggerAIMove, startAIvsAI, placePiece, setFillColCallback }
 }

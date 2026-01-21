@@ -5,7 +5,7 @@ import { useWinCheck } from "./useWinCheck";
 import { useGameFlow } from './useGameFlow'
 
 export function useGame() {
-   const { isCurrentPlayerAI, triggerAIMove } = useGameFlow();
+   const { isCurrentPlayerAI, triggerAIMove, setFillColCallback } = useGameFlow();
    const gameSettingsStore = useGameSettingsStore();
    const gameStateStore = useGameStateStore();
    const { 
@@ -79,6 +79,9 @@ export function useGame() {
 
    // Start game - call this when game status changes to 'playing'
    const startGame = () => {
+      // Register fillCol callback for AI moves
+      setFillColCallback(fillCol);
+      
       // If first player is AI (mode 0, or mode 1 with AI starting), trigger AI
       if (isCurrentPlayerAI()) {
          triggerAIMove(fillCol);

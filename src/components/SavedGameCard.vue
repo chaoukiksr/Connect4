@@ -14,10 +14,10 @@
       <h3 class="text-xl font-bold text-gray-800 mb-2">{{ game.id }}</h3>
 
       <p class="text-sm text-gray-500 mb-1">
-         {{ getGameModeText(game.settings?.gameMode) }}
+         {{ getGameModeText(game.gameMode) }}
       </p>
 
-    //  <p class="text-xs text-gray-400">{{ formatDate(game.lastModified) }}</p>
+      <p class="text-xs text-gray-400">{{ formatDate(game.id) }}</p>
 
       <button @click.stop="$emit('delete', game.id)" class="mt-2 text-xs text-red-500 hover:text-red-700">
          🗑️ Supprimer
@@ -37,8 +37,8 @@ console.log(props.game);
 defineEmits(['load', 'delete']);
 
 const getGameModeText = (mode) => {
-   if (mode === '0player') return '🤖 IA vs 🤖 IA';
-   if (mode === '1player') return '👤 Player vs 🤖 IA';
+   if (mode === 0) return '🤖 IA vs 🤖 IA';
+   if (mode === 1) return '👤 Player vs 🤖 IA';
    return '👤 Player vs 👤 Player';
 };
 

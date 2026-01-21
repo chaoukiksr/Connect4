@@ -22,7 +22,7 @@
             <NewGameSettingsModal v-if="isModalOpen" v-model="isModalOpen" @submit="startANewGame"/>
          </div>
       </section>
-      <SavedGameList :games="games" />
+      <SavedGameList :games="games" @load-game="loadGame" @delete-game="deleteGame" />
       </main>
 </template>
 
@@ -46,16 +46,45 @@
 import { storeToRefs } from 'pinia';
    import { useGameStateStore } from '../stores/gameState';
    import { useAi } from '../composables/useAi';
-   import { useGameFlow } from '../composables/useGameFlow';
-   
    const gameSettings = useGameSettingsStore();
    const gameState = useGameStateStore();
    const {boardSize,aiDepth,aiMode,gameMode,startingPlayer} = storeToRefs(gameSettings)
    const {upload} = useFileManagement()
    const {setSettings,setAiDepth,setAiMode,setBoardSize,setGameMode,setStartingPlayer} = useGameSettingsStore();
    const { resetGame } = gameState;
-   const {startAIvsAI} = useGameFlow();
    const isModalOpen = ref(false);
+
+   const loadGame = (gameId) => {
+      const savedGames = JSON.parse(localStorage.getItem('games')) || [];
+      const game = savedGames.find(g => g && g.id === gameId);
+      if (game) {
+         // Load game state
+         gameState.gameStatus = game.gameStatus;
+         gameState.currentPlayer = game.currentPlayer;
+         gameState.winner = game.winner;
+         gameState.board = game.board;
+         gameState.moveHistory = game.history;
+         gameState.historyIndex = game.historyIndex;
+         
+         // Load game settings
+         setSettings({
+            gameMode: game.gameMode,
+            startingPlayer: game.startingPlayer,
+            boardSize: game.boardSize,
+            aiMode: game.aiMode,
+            aiDepth: game.aiDepth
+         });
+         
+         router.push('/game');
+      }
+   };
+
+   const deleteGame = (gameId) => {
+      const savedGames = JSON.parse(localStorage.getItem('games')) || [];
+      const updatedGames = savedGames.filter(g => g && g.id !== gameId);
+      localStorage.setItem('games', JSON.stringify(updatedGames));
+      games.value = updatedGames;
+   };
 
    const startANewGame = (data) =>{
       console.log('data recieved from the modal',data);
@@ -69,9 +98,6 @@ import { storeToRefs } from 'pinia';
       
       // Recreate the board with new dimensions
       resetGame();
-      if(gameMode.value == 0){
-         startAIvsAI();
-      }
       console.log('store boardSize', boardSize.value);
       
       console.log('settings are setted');
