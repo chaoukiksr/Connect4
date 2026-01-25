@@ -26,7 +26,7 @@ export function useGame() {
    } = storeToRefs(gameStateStore)
 
    const { setWinner, resetGame, setCurrentPlayer, setGameStatus, addMove } = gameStateStore;
-   const { checkProbableWin } = useWinCheck()
+   const { checkProbableWin } = useWinCheck();
 
    const isColAvailable = (col) => {
       return board.value[0][col] === 0;
@@ -56,33 +56,27 @@ export function useGame() {
          return;
       }
 
-      // Place the piece
+    
       for (let i = boardSize.value.rows - 1; i >= 0; i--) {
          if (board.value[i][col] === 0) {
             board.value[i][col] = currentPlayer.value
             addMove(i, col, currentPlayer.value)
-            checkProbableWin(i, col, currentPlayer.value)
-            
-            // Switch player
+            checkProbableWin(i, col, currentPlayer.value) 
             currentPlayer.value = currentPlayer.value === 1 ? 2 : 1;
-            
             console.log('col is filled, current player now:', currentPlayer.value);
-
-            // Check if next player is AI, trigger AI move
             if (gameStatus.value === 'playing' && isCurrentPlayerAI()) {
-               triggerAIMove(fillCol);  // Pass fillCol as callback to avoid circular import
+               triggerAIMove(fillCol);  
             }
             break;
          }
       }
    }
 
-   // Start game - call this when game status changes to 'playing'
+
    const startGame = () => {
-      // Register fillCol callback for AI moves
+     
       setFillColCallback(fillCol);
       
-      // If first player is AI (mode 0, or mode 1 with AI starting), trigger AI
       if (isCurrentPlayerAI()) {
          triggerAIMove(fillCol);
       }

@@ -36,8 +36,6 @@ export function useGameFlow() {
       return false;
    }
 
-   // Trigger AI move with delay
-   // fillColCallback is optional - can be passed from useGame to avoid circular dependency
    let fillColCallback = null;
    
    const setFillColCallback = (callback) => {
@@ -54,7 +52,7 @@ export function useGameFlow() {
       }
 
       setTimeout(() => {
-         if (gameStatus.value !== 'playing') return; // Re-check after delay
+         if (gameStatus.value !== 'playing') return; 
          const aiCol = calculateCol();
          if (aiCol >= 0) {
             actualCallback(aiCol);
