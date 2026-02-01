@@ -1,45 +1,65 @@
 <template>
-   <!-- Board Container -->
-   <div class="bg-white ">
+  <div class="bg-white">
 
-      <!-- Game Grid: dynamic rows x cols -->
-      <div 
-         class="grid gap-2" 
-         :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
+    <!-- Numéros des colonnes -->
+    <div
+      class="grid gap-2 mb-2"
+      :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
+    >
+      <div
+        v-for="col in cols"
+        :key="col"
+        class="text-center font-bold text-gray-700"
       >
-
-         <!-- UNE SEULE CELLULE - Exemple à répéter avec v-for -->
-         <Cell v-for="a in totalCells" :key="a" :col="Math.floor((a - 1) % cols)" :row="Math.floor((a - 1) / cols)" :boardValue="board[Math.floor((a - 1)/cols)][Math.floor((a - 1) % cols)]" @cell-clicked="fillColumn" />
-         <!-- Répéter avec v-for pour toutes les cellules -->
-
+        {{ col }}
       </div>
-   </div>
+    </div>
+
+    <!-- Grille -->
+    <div
+      class="grid gap-2"
+      :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
+    >
+      <Cell
+        v-for="a in totalCells"
+        :key="a"
+        :col="Math.floor((a - 1) % cols)"
+        :row="Math.floor((a - 1) / cols)"
+        :boardValue="board[Math.floor((a - 1)/cols)][Math.floor((a - 1) % cols)]"
+        :isWinning="winningCells.some(
+          c =>
+            c.row === Math.floor((a - 1) / cols) &&
+            c.col === Math.floor((a - 1) % cols)
+        )"
+        @cell-clicked="fillColumn"
+      />
+    </div>
+
+  </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import Cell from './Cell.vue';
 import { useGame } from '../composables/useGame';
-const props = defineProps({
-   board: {
-      type: Array,
-   },
-   boardSize: {
-      type: Object,
-   }
-})
+import { useGameStateStore } from '../stores/gameState';
+import { storeToRefs } from 'pinia';
 
-console.log(props.board);
-console.log(props.boardSize);
+const props = defineProps({
+  board: Array,
+  boardSize: Object
+});
+
 const rows = props.boardSize.rows;
-const cols = props.boardSize.cols
-const totalCells = computed(() => cols * rows)
-const {fillCol} = useGame();
+const cols = props.boardSize.cols;
+const totalCells = computed(() => cols * rows);
+
+const { fillCol } = useGame();
+
+const gameState = useGameStateStore();
+const { winningCells } = storeToRefs(gameState);
 
 const fillColumn = (col) => {
-   fillCol(col);
-   console.log('col is filled', col);
-   
-}
-
+  fillCol(col);
+};
 </script>

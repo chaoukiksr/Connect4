@@ -1,119 +1,98 @@
 import { useGameStateStore } from "../stores/gameState";
 import { useGameSettingsStore } from "../stores/gameSettings";
-import {storeToRefs} from 'pinia'
-export  function useWinCheck(){
-   const gameStateStore = useGameStateStore()
-   const gameSettingsStore = useGameSettingsStore()
-   const {boardSize} = storeToRefs(gameSettingsStore);
-   const {board} = storeToRefs(gameStateStore)
-  
-   const {setWinner, setGameStatus} = gameStateStore;
-   const horizontalCheck = (row, col, player) => {
-      //check on the left
-      console.log("using hc function");
-      let leftCount = 0;
-      let i = col - 1;
-      while (i >= 0 && board.value[row][i] === player) {
-         console.log(leftCount);
-         leftCount++;
-         i--;
-      }
-      //check on the right
-      let rightCount = 0;
-      let j = col + 1;
-      while (j < boardSize.value.cols - 1 && board.value[row][j] == player) {
-         console.log(rightCount);
-         rightCount++;
-         j++;
-      }
+import { storeToRefs } from "pinia";
 
-      const totalCount = leftCount + 1 + rightCount;
-      return totalCount >= 4
-   }
-   const verticalCheck = (row, col, player) => {
-      console.log(row, col, player);
+export function useWinCheck() {
+  const gameStateStore = useGameStateStore();
+  const gameSettingsStore = useGameSettingsStore();
 
-      //upper check
-      let i = row - 1;
-      let upperCount = 0;
-      while (i >= 0 && board.value[i][col] == player) {
-         upperCount++;
-         i--;
-      }
+  const { boardSize } = storeToRefs(gameSettingsStore);
+  const { board } = storeToRefs(gameStateStore);
 
-      //bottomCount
-      let j = row + 1;
-      let bottomCount = 0;
-      while (j <= boardSize.value.rows - 1 && board.value[j][col] == player) {
-         bottomCount++;
-         j++;
-      }
+  const { setWinner, setGameStatus, setWinningCells } = gameStateStore;
 
-      const totalCount = bottomCount + 1 + upperCount;
-      return totalCount >= 4;
-   }
+  const getLine = (cells) => cells.slice(0, 4);
 
-   const diagonalCheck = (row, col, player) => {
-      // up right to down left check
-      // upper Right  
-      let i = col + 1;
-      let j = row - 1;
-      let upperRightCount = 0;
-      while (i < boardSize.value.cols - 1 && j >= 0 && board.value[j][i] == player) {
-         upperRightCount++;
-         i++;
-         j--;
-      }
-      // down left 
-      i = col - 1;
-      j = row + 1;
-      let downLeftCount = 0;
-      while (i >= 0 && j < boardSize.value.rows - 1 && board.value[j][i] == player) {
-         downLeftCount++;
-         i--;
-         j++;
-      }
-      const totalURLDCount = upperRightCount + 1 + downLeftCount;
+  const horizontalCheck = (row, col, player) => {
+    let cells = [{ row, col }];
 
-      //down right count
-      i = col + 1;
-      j = row + 1;
-      let downRightCount = 0;
-      while (i < boardSize.value.cols - 2 && j < boardSize.value.rows - 1 && board.value[j][i] == player) {
-         downRightCount++;
-         i++;
-         j++;
-      }
+    let i = col - 1;
+    while (i >= 0 && board.value[row][i] === player) {
+      cells.unshift({ row, col: i });
+      i--;
+    }
 
-      //upper left count
-      i = col - 1;
-      j = row - 1;
-      let upperLeftCount = 0;
-      while (i >= 0 && j >= 0 && board.value[j][i] == player) {
-         upperLeftCount++;
-         i--;
-         j--;
-      }
+    i = col + 1;
+    while (i < boardSize.value.cols && board.value[row][i] === player) {
+      cells.push({ row, col: i });
+      i++;
+    }
 
-      const totalULDRCount = upperLeftCount + 1 + downRightCount;
+    return cells.length >= 4 ? getLine(cells) : null;
+  };
 
-      return totalURLDCount >= 4 || totalULDRCount >= 4;
-   }
-   const checkProbableWin = (row, col, player) => {
-      if (horizontalCheck(row, col, player) || verticalCheck(row, col, player) || diagonalCheck(row, col, player)
-      ) {
-         setWinner(player)
-        setGameStatus("finished")
-        
-         alert("win")
-      }
-      // if(horizontalCheck(row,col)){
-      //   HighlightRow(row);
-      // }else if(verticalCheck(row,col)){
-      //   HighlightCol(col);
-      // }else if(diagonalCheck(row,col)){
-      //   highl
-   }
+  const verticalCheck = (row, col, player) => {
+    let cells = [{ row, col }];
 
-   return {checkProbableWin}
+    let i = row - 1;
+    while (i >= 0 && board.value[i][col] === player) {
+      cells.unshift({ row: i, col });
+      i--;
+    }
+
+    i = row + 1;
+    while (i < boardSize.value.rows && board.value[i][col] === player) {
+      cells.push({ row: i, col });
+      i++;
+    }
+
+    return cells.length >= 4 ? getLine(cells) : null;
+  };
+
+  const diagonalCheck = (row, col, player) => {
+    let cells1 = [{ row, col }];
+    let i = row - 1, j = col + 1;
+    while (i >= 0 && j < boardSize.value.cols && board.value[i][j] === player) {
+      cells1.unshift({ row: i, col: j });
+      i--; j++;
+    }
+
+    i = row + 1; j = col - 1;
+    while (i < boardSize.value.rows && j >= 0 && board.value[i][j] === player) {
+      cells1.push({ row: i, col: j });
+      i++; j--;
+    }
+
+    if (cells1.length >= 4) return getLine(cells1);
+
+    let cells2 = [{ row, col }];
+    i = row - 1; j = col - 1;
+    while (i >= 0 && j >= 0 && board.value[i][j] === player) {
+      cells2.unshift({ row: i, col: j });
+      i--; j--;
+    }
+
+    i = row + 1; j = col + 1;
+    while (i < boardSize.value.rows && j < boardSize.value.cols && board.value[i][j] === player) {
+      cells2.push({ row: i, col: j });
+      i++; j++;
+    }
+
+    return cells2.length >= 4 ? getLine(cells2) : null;
+  };
+
+  const checkProbableWin = (row, col, player) => {
+    const win =
+      horizontalCheck(row, col, player) ||
+      verticalCheck(row, col, player) ||
+      diagonalCheck(row, col, player);
+
+    if (win) {
+      setWinningCells(win);
+      setWinner(player);
+      setGameStatus("finished");
+    }
+  };
+
+  return { checkProbableWin };
 }

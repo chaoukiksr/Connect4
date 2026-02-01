@@ -1,73 +1,89 @@
-import { defineStore, storeToRefs} from 'pinia'
+import { defineStore, storeToRefs } from 'pinia'
 import { ref } from 'vue'
-import {useGameSettingsStore} from './gameSettings'
+import { useGameSettingsStore } from './gameSettings'
+
 export const useGameStateStore = defineStore('gameState', () => {
-   const gameSettings = useGameSettingsStore();
-   const {boardSize} = storeToRefs(gameSettings);
-   const gameStatus = ref('start')
-   const winner = ref(null)
-   const currentPlayer = ref(1);
-   const board = ref(Array(boardSize.value.rows
-   ).fill().map(() => Array(boardSize.value.cols).fill(0)))
-   
-   const moveHistory = ref([]);
-   const historyIndex = ref(-1)
+  const gameSettings = useGameSettingsStore();
+  const { boardSize } = storeToRefs(gameSettings);
 
-   const addMove = (row, col, player) =>{
-      moveHistory.value.push({row,col,player});
-      historyIndex.value++
-   }
+  const gameStatus = ref('start');
+  const winner = ref(null);
+  const currentPlayer = ref(1);
 
-   const undo = () =>{
-      if(historyIndex.value < 0)  return false;
-      const move = moveHistory.value[historyIndex.value];
-      board.value[move.row][move.col] = 0;
-      currentPlayer.value = move.player;
-      historyIndex.value--;
-      return true;
-   }
+  const board = ref(
+    Array(boardSize.value.rows)
+      .fill()
+      .map(() => Array(boardSize.value.cols).fill(0))
+  );
 
-   const redo = () =>{
-      if(historyIndex.value >=moveHistory.value.length - 1) return false;
-      historyIndex.value++;
-      const move = moveHistory.value[historyIndex.value];
-      board.value[move.row][move.col] = move.player
-      currentPlayer.value == 1 ? 2 : 1;
-      return true;
-   
-   }
+  const winningCells = ref([]);
 
+  const moveHistory = ref([]);
+  const historyIndex = ref(-1);
 
-   const setCurrentPlayer = (player) => {
-      currentPlayer.value = player;
-   }
-   const setGameStatus = (status) => {
-      gameStatus.value = status;
-   }
-   const setWinner = (player) => {
-      winner.value = player
-   }
+  const addMove = (row, col, player) => {
+    moveHistory.value.push({ row, col, player });
+    historyIndex.value++;
+  };
 
-   const resetGame = () => {
-      currentPlayer.value = 1;
-      gameStatus.value = 'start'
-      winner.value = null
-      board.value = Array(boardSize.value.rows
-      ).fill().map(() => Array(boardSize.value.cols).fill(0))
-   }
-   return {
-      gameStatus,
-      winner,
-      currentPlayer,
-      board,
-      moveHistory,
-      historyIndex,
-      setCurrentPlayer,
-      setGameStatus,
-      setWinner,
-      resetGame,
-      addMove,
-      undo,
-      redo
-   }
-})
+  const undo = () => {
+    if (historyIndex.value < 0) return false;
+    const move = moveHistory.value[historyIndex.value];
+    board.value[move.row][move.col] = 0;
+    currentPlayer.value = move.player;
+    historyIndex.value--;
+    return true;
+  };
+
+  const redo = () => {
+    if (historyIndex.value >= moveHistory.value.length - 1) return false;
+    historyIndex.value++;
+    const move = moveHistory.value[historyIndex.value];
+    board.value[move.row][move.col] = move.player;
+    return true;
+  };
+
+  const setCurrentPlayer = (player) => {
+    currentPlayer.value = player;
+  };
+
+  const setGameStatus = (status) => {
+    gameStatus.value = status;
+  };
+
+  const setWinner = (player) => {
+    winner.value = player;
+  };
+
+  const setWinningCells = (cells) => {
+    winningCells.value = cells;
+  };
+
+  const resetGame = () => {
+    currentPlayer.value = 1;
+    gameStatus.value = 'start';
+    winner.value = null;
+    winningCells.value = [];
+    board.value = Array(boardSize.value.rows)
+      .fill()
+      .map(() => Array(boardSize.value.cols).fill(0));
+  };
+
+  return {
+    gameStatus,
+    winner,
+    currentPlayer,
+    board,
+    winningCells,
+    moveHistory,
+    historyIndex,
+    setCurrentPlayer,
+    setGameStatus,
+    setWinner,
+    setWinningCells,
+    resetGame,
+    addMove,
+    undo,
+    redo
+  };
+});
