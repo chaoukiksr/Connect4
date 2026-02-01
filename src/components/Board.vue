@@ -33,8 +33,8 @@
         )"
         @cell-clicked="fillColumn"
       />
+      <div v-for="col in cols" key="col" class="text-center font-bold p-5">0</div>
     </div>
-
   </div>
 </template>
 
