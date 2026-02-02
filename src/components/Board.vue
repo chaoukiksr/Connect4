@@ -76,25 +76,49 @@ const cols = props.boardSize.cols;
 const totalCells = computed(() => cols * rows);
 
 const { fillCol } = useGame();
-const { getColumnScores } = useMinimax();
+const { getColumnScoresAsync } = useMinimax();
 
 const gameState = useGameStateStore();
 const gameSettings = useGameSettingsStore();
-const { winningCells } = storeToRefs(gameState);
+const { winningCells, gameStatus } = storeToRefs(gameState);
 const { aiDepth } = storeToRefs(gameSettings);
 
 // Reactive column scores
 const columnScores = ref(Array(cols).fill(null));
+let isCalculating = false;
 
-// Update scores whenever the board changes
+// Update scores whenever the board changes (only when game is playing)
 watch(
   () => props.board,
-  (newBoard) => {
+  async (newBoard) => {
+    // Skip if already calculating or game hasn't started
+    if (isCalculating || gameStatus.value === 'start') return;
+    
     if (newBoard) {
-      columnScores.value = getColumnScores(newBoard, aiDepth.value);
+      isCalculating = true;
+      try {
+        columnScores.value = await getColumnScoresAsync(newBoard, aiDepth.value);
+      } finally {
+        isCalculating = false;
+      }
     }
   },
-  { deep: true, immediate: true }
+  { deep: true }
+);
+
+// Also update when game status changes to playing
+watch(
+  () => gameStatus.value,
+  async (status) => {
+    if (status === 'playing' && props.board && !isCalculating) {
+      isCalculating = true;
+      try {
+        columnScores.value = await getColumnScoresAsync(props.board, aiDepth.value);
+      } finally {
+        isCalculating = false;
+      }
+    }
+  }
 );
 
 const fillColumn = (col) => {

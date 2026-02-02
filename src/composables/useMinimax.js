@@ -76,7 +76,7 @@ export function useMinimax() {
     }
   };
 
-  const minimax = (board, depth, isMaximizing) => {
+  const minimax = (board, depth, isMaximizing, alpha = -Infinity, beta = Infinity) => {
     if (checkWinForMinimax(board, MAX_PLAYER)) return 100 - depth;
     if (checkWinForMinimax(board, MIN_PLAYER)) return -100 + depth;
     if (getAvailableCol(board).length === 0) return 0;
@@ -88,8 +88,10 @@ export function useMinimax() {
       for (let col of getAvailableCol(board)) {
         const newBoard = copyBoard(board);
         makeMove(newBoard, col, MAX_PLAYER);
-        const score = minimax(newBoard, depth - 1, false);
+        const score = minimax(newBoard, depth - 1, false, alpha, beta);
         bestScore = Math.max(score, bestScore);
+        alpha = Math.max(alpha, score);
+        if (beta <= alpha) break; // Alpha-beta pruning
       }
       return bestScore;
     } else {
@@ -97,8 +99,10 @@ export function useMinimax() {
       for (let col of getAvailableCol(board)) {
         const newBoard = copyBoard(board);
         makeMove(newBoard, col, MIN_PLAYER);
-        const score = minimax(newBoard, depth - 1, true);
+        const score = minimax(newBoard, depth - 1, true, alpha, beta);
         bestScore = Math.min(score, bestScore);
+        beta = Math.min(beta, score);
+        if (beta <= alpha) break; // Alpha-beta pruning
       }
       return bestScore;
     }
@@ -107,17 +111,20 @@ export function useMinimax() {
   const getBestMove = (board, depth = 4, onProgress = null) => {
     let bestScore = -Infinity;
     let move = null;
+    let alpha = -Infinity;
+    const beta = Infinity;
     const availableCols = getAvailableCol(board);
     const totalCols = availableCols.length;
     
     availableCols.forEach((col, index) => {
       const newBoard = copyBoard(board);
       makeMove(newBoard, col, MAX_PLAYER);
-      const score = minimax(newBoard, depth - 1, false);
+      const score = minimax(newBoard, depth - 1, false, alpha, beta);
       if (score > bestScore) {
         bestScore = score;
         move = col;
       }
+      alpha = Math.max(alpha, score);
       // Report progress
       if (onProgress) {
         const progress = Math.round(((index + 1) / totalCols) * 100);
@@ -131,6 +138,8 @@ export function useMinimax() {
   const getBestMoveAsync = async (board, depth = 4, onProgress = null) => {
     let bestScore = -Infinity;
     let move = null;
+    let alpha = -Infinity;
+    const beta = Infinity;
     const availableCols = getAvailableCol(board);
     const totalCols = availableCols.length;
     
@@ -138,24 +147,28 @@ export function useMinimax() {
       const col = availableCols[index];
       const newBoard = copyBoard(board);
       makeMove(newBoard, col, MAX_PLAYER);
-      const score = minimax(newBoard, depth - 1, false);
+      const score = minimax(newBoard, depth - 1, false, alpha, beta);
       if (score > bestScore) {
         bestScore = score;
         move = col;
       }
+      alpha = Math.max(alpha, score);
       // Report progress and yield to UI thread
       if (onProgress) {
         const progress = Math.round(((index + 1) / totalCols) * 100);
         onProgress(progress);
         // Small delay to allow UI to render the progress update
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
     }
     return move;
   };
 
   // Returns an array of scores for each column (null if column is full)
+  // Uses a capped depth for display to avoid UI freezes
   const getColumnScores = (board, depth = 4) => {
+    // Cap display depth to prevent UI freezes
+    const displayDepth = Math.min(depth, 4);
     const cols = board[0].length;
     const scores = [];
     for (let col = 0; col < cols; col++) {
@@ -164,12 +177,35 @@ export function useMinimax() {
       } else {
         const newBoard = copyBoard(board);
         makeMove(newBoard, col, MAX_PLAYER);
-        const score = minimax(newBoard, depth - 1, false);
+        const score = minimax(newBoard, displayDepth - 1, false, -Infinity, Infinity);
         scores.push(score);
       }
     }
     return scores;
   };
 
-  return { getBestMove, getBestMoveAsync, getColumnScores };
+  // Async version of getColumnScores for use in watchers
+  const getColumnScoresAsync = async (board, depth = 4) => {
+    // Cap display depth to prevent UI freezes
+    const displayDepth = Math.min(depth, 4);
+    const cols = board[0].length;
+    const scores = [];
+    for (let col = 0; col < cols; col++) {
+      if (board[0][col] !== 0) {
+        scores.push(null); // Column is full
+      } else {
+        const newBoard = copyBoard(board);
+        makeMove(newBoard, col, MAX_PLAYER);
+        const score = minimax(newBoard, displayDepth - 1, false, -Infinity, Infinity);
+        scores.push(score);
+      }
+      // Yield to UI thread periodically
+      if (col % 2 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+    return scores;
+  };
+
+  return { getBestMove, getBestMoveAsync, getColumnScores, getColumnScoresAsync };
 }
