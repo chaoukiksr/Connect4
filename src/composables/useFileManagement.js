@@ -89,8 +89,8 @@ export function useFileManagement () {
       const existingGames = JSON.parse(localStorage.getItem('games')) || [];
       existingGames.push(data);
       localStorage.setItem('games', JSON.stringify(existingGames));
-      alert('game is paused')
       console.log('Game saved successfully');
+      alert('game is saved')
    }
    return {download,upload,save}
 }

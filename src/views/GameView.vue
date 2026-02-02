@@ -83,9 +83,13 @@
 
             <div v-if="aiMode == 'minimax'" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <label class="block text-xs text-gray-500 mb-2">IA thinking progress: <span
-                     class="font-bold text-emerald-600">{{ aiThinkingProgress }}%</span></label>
-               <input type="range" min="0" max="100" :value="aiThinkingProgress" disabled
-                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                     class="font-bold text-emerald-500">{{ aiThinkingProgress }}%</span></label>
+               <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                     class="h-full bg-emerald-400 rounded-full transition-all duration-150 ease-out"
+                     :style="{ width: `${aiThinkingProgress}%` }"
+                  ></div>
+               </div>
                <div class="flex justify-between text-xs text-gray-400 mt-1">
                   <span>0%</span>
                   <span>100%</span>
@@ -95,9 +99,11 @@
         
       </div>
    </main>
+   <QuitModal :isOpen="showQuitModal" @cancel="showQuitModal = false" @quit="quitWithoutSaving" @save-quit="quitAndSave"/>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import Navbar from '../components/Navbar.vue'
 import { useGameStateStore } from '../stores/gameState';
 import { useGameSettingsStore } from '../stores/gameSettings';
@@ -105,12 +111,14 @@ import { storeToRefs } from 'pinia'
 import Board from '../components/Board.vue';
 import { useFileManagement } from '../composables/useFileManagement'
 import { useGame } from '../composables/useGame'
-
+import QuitModal from '../components/QuitModal.vue';
+import { useRouter } from 'vue-router';
+const router = useRouter()
 const { download,save } = useFileManagement()
 const { startGame } = useGame()
 const gameSettingsStore = useGameSettingsStore();
 const gameStateStore = useGameStateStore();
-
+let showQuitModal = ref(false);
 // State (reactive refs)
 const { aiDepth, aiMode, boardSize, gameMode, startingPlayer } = storeToRefs(gameSettingsStore)
 const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex, aiThinkingProgress } = storeToRefs(gameStateStore)
@@ -152,5 +160,17 @@ const downloadGame = () =>{
 
 const saveGame = ()=>{
    save()
+}
+const quitGame = () =>{
+   //show modal for eather save and quite, quit without saving, and cancel the quit operation
+   showQuitModal.value = true
+      quit();
+}
+const quitWithoutSaving = () => {
+   router.push('/')
+}
+const quitAndSave = () =>{
+   saveGame();
+   router.push('/')
 }
 </script>
