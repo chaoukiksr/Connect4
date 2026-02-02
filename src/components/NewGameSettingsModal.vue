@@ -99,7 +99,7 @@
          </div>
 
          <!-- AI Settings (shown only if AI is playing) -->
-         <div class="bg-gray-50 rounded-xl p-5 border border-gray-200">
+         <div v-if="formData.gameMode != 2" class="bg-gray-50 rounded-xl p-5 border border-gray-200">
             <label class="block text-sm font-semibold text-gray-700 mb-3">Paramètres IA</label>
 
             <!-- AI Mode -->
@@ -113,16 +113,16 @@
                   </button>
                   <button @click="formData.aiMode = 'minimax'"
                      :class="formData.aiMode === 'minimax' ? 'bg-emerald-50 border-2 border-emerald-500 shadow-sm' : 'bg-white border-2 border-gray-300 hover:border-emerald-500'"
-                     class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors">
+                     class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-coui o olors">
                      Minimax
                   </button>
                </div>
             </div>
 
             <!-- Depth Slider -->
-            <div>
+            <div v-if="formData.aiMode == 'minimax'">
                <label class="block text-xs text-gray-500 mb-2">Profondeur: <span
-                     class="font-bold text-emerald-600">5</span></label>
+                     class="font-bold text-emerald-600">{{ formData.aiDepth }}</span></label>
                <input v-model="formData.aiDepth" type="range" min="1" max="10" value="5"
                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500">
                <div class="flex justify-between text-xs text-gray-400 mt-1">
@@ -160,10 +160,10 @@ import { reactive, useModel } from 'vue';
    })
    const emit = defineEmits(['update:modelValue','submit']);
    const formData = reactive({
-      gameMode: 1, //default (number, not string)
+      gameMode: 1,
       startingPlayer:'red',
-      rows:8, //default
-      columns:9,//default
+      rows:8, 
+      columns:9,
       aiMode:'minimax',
       aiDepth:5
    })

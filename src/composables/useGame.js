@@ -12,10 +12,10 @@ export function useGame() {
 
   const { boardSize, aiDepth } = storeToRefs(gameSettingsStore);
   const { board, currentPlayer, gameStatus } = storeToRefs(gameStateStore);
-  const { addMove } = gameStateStore;
+  const { addMove, setAiThinkingProgress } = gameStateStore;
 
   const { checkProbableWin } = useWinCheck();
-  const { getBestMove } = useMinimax(); // <- on récupère la fonction
+  const { getBestMove, getBestMoveAsync } = useMinimax(); // <- on récupère la fonction
 
   const isColAvailable = (col) => board.value[0][col] === 0;
 
@@ -31,6 +31,11 @@ export function useGame() {
     if (gameStatus.value !== "playing") return;
     if (!isColAvailable(col)) return;
 
+    // Reset progress when human plays
+    if (!isCurrentPlayerAI()) {
+      setAiThinkingProgress(0);
+    }
+
     for (let r = boardSize.value.rows - 1; r >= 0; r--) {
       if (board.value[r][col] === 0) {
         board.value[r][col] = currentPlayer.value;
@@ -40,8 +45,11 @@ export function useGame() {
         currentPlayer.value = currentPlayer.value === 1 ? 2 : 1;
 
         if (gameStatus.value === "playing" && isCurrentPlayerAI()) {
-          triggerAIMove(() => {
-            const aiCol = getBestMove(board.value, aiDepth.value);
+          triggerAIMove(async () => {
+            setAiThinkingProgress(0);
+            const aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
+              setAiThinkingProgress(progress);
+            });
             if (aiCol !== null) fillCol(aiCol);
           });
         }
@@ -54,8 +62,11 @@ export function useGame() {
     setFillColCallback(fillCol);
 
     if (isCurrentPlayerAI()) {
-      triggerAIMove(() => {
-        const aiCol = getBestMove(board.value, aiDepth.value);
+      triggerAIMove(async () => {
+        setAiThinkingProgress(0);
+        const aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
+          setAiThinkingProgress(progress);
+        });
         if (aiCol !== null) fillCol(aiCol);
       });
     }

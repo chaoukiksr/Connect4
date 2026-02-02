@@ -104,10 +104,13 @@ export function useMinimax() {
     }
   };
 
-  const getBestMove = (board, depth = 4) => {
+  const getBestMove = (board, depth = 4, onProgress = null) => {
     let bestScore = -Infinity;
     let move = null;
-    for (let col of getAvailableCol(board)) {
+    const availableCols = getAvailableCol(board);
+    const totalCols = availableCols.length;
+    
+    availableCols.forEach((col, index) => {
       const newBoard = copyBoard(board);
       makeMove(newBoard, col, MAX_PLAYER);
       const score = minimax(newBoard, depth - 1, false);
@@ -115,9 +118,58 @@ export function useMinimax() {
         bestScore = score;
         move = col;
       }
+      // Report progress
+      if (onProgress) {
+        const progress = Math.round(((index + 1) / totalCols) * 100);
+        onProgress(progress);
+      }
+    });
+    return move;
+  };
+
+  // Async version for smooth UI progress updates
+  const getBestMoveAsync = async (board, depth = 4, onProgress = null) => {
+    let bestScore = -Infinity;
+    let move = null;
+    const availableCols = getAvailableCol(board);
+    const totalCols = availableCols.length;
+    
+    for (let index = 0; index < availableCols.length; index++) {
+      const col = availableCols[index];
+      const newBoard = copyBoard(board);
+      makeMove(newBoard, col, MAX_PLAYER);
+      const score = minimax(newBoard, depth - 1, false);
+      if (score > bestScore) {
+        bestScore = score;
+        move = col;
+      }
+      // Report progress and yield to UI thread
+      if (onProgress) {
+        const progress = Math.round(((index + 1) / totalCols) * 100);
+        onProgress(progress);
+        // Small delay to allow UI to render the progress update
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
     }
     return move;
   };
 
-  return { getBestMove };
+  // Returns an array of scores for each column (null if column is full)
+  const getColumnScores = (board, depth = 4) => {
+    const cols = board[0].length;
+    const scores = [];
+    for (let col = 0; col < cols; col++) {
+      if (board[0][col] !== 0) {
+        scores.push(null); // Column is full
+      } else {
+        const newBoard = copyBoard(board);
+        makeMove(newBoard, col, MAX_PLAYER);
+        const score = minimax(newBoard, depth - 1, false);
+        scores.push(score);
+      }
+    }
+    return scores;
+  };
+
+  return { getBestMove, getBestMoveAsync, getColumnScores };
 }

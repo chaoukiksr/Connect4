@@ -81,8 +81,18 @@
                </div>
             </div>
 
+            <div v-if="aiMode == 'minimax'" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+              <label class="block text-xs text-gray-500 mb-2">IA thinking progress: <span
+                     class="font-bold text-emerald-600">{{ aiThinkingProgress }}%</span></label>
+               <input type="range" min="0" max="100" :value="aiThinkingProgress" disabled
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+               <div class="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>0%</span>
+                  <span>100%</span>
+               </div>
+            </div>
          </div>
-
+        
       </div>
    </main>
 </template>
@@ -103,7 +113,7 @@ const gameStateStore = useGameStateStore();
 
 // State (reactive refs)
 const { aiDepth, aiMode, boardSize, gameMode, startingPlayer } = storeToRefs(gameSettingsStore)
-const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex } = storeToRefs(gameStateStore)
+const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex, aiThinkingProgress } = storeToRefs(gameStateStore)
 
 // Actions (functions) - don't use storeToRefs for these
 const { resetGame, setCurrentPlayer, setGameStatus, setWinner, undo, redo } = gameStateStore

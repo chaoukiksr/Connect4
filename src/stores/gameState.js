@@ -21,6 +21,13 @@ export const useGameStateStore = defineStore('gameState', () => {
   const moveHistory = ref([]);
   const historyIndex = ref(-1);
 
+  // AI thinking progress (0-100)
+  const aiThinkingProgress = ref(0);
+
+  const setAiThinkingProgress = (progress) => {
+    aiThinkingProgress.value = progress;
+  };
+
   const addMove = (row, col, player) => {
     moveHistory.value.push({ row, col, player });
     historyIndex.value++;
@@ -64,6 +71,7 @@ export const useGameStateStore = defineStore('gameState', () => {
     gameStatus.value = 'start';
     winner.value = null;
     winningCells.value = [];
+    aiThinkingProgress.value = 0;
     board.value = Array(boardSize.value.rows)
       .fill()
       .map(() => Array(boardSize.value.cols).fill(0));
@@ -77,10 +85,12 @@ export const useGameStateStore = defineStore('gameState', () => {
     winningCells,
     moveHistory,
     historyIndex,
+    aiThinkingProgress,
     setCurrentPlayer,
     setGameStatus,
     setWinner,
     setWinningCells,
+    setAiThinkingProgress,
     resetGame,
     addMove,
     undo,

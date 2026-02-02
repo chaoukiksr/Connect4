@@ -57,7 +57,7 @@ export function useGameFlow() {
          if (aiCol >= 0) {
             actualCallback(aiCol);
          }
-      }, 750);
+      }, 0);
    }
 
    // Start AI vs AI game loop
