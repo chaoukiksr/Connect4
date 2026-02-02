@@ -14,10 +14,11 @@ export function useGameFlow() {
 
 
    const isCurrentPlayerAI = () => {
-      if (gameMode.value === 2) return false; 
-      if (gameMode.value === 0) return true;   
+      if (gameMode.value === 2) return false;  // PvP: no AI
+      if (gameMode.value === 0) return true;   // AI vs AI: always AI
       if (gameMode.value === 1) {
-         return currentPlayer.value === 2;    
+         // PvE: Red (1) is always human, Yellow (2) is always AI
+         return currentPlayer.value === 2;
       }
       return false;
    }

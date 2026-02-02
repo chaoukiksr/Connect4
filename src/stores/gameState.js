@@ -67,11 +67,16 @@ export const useGameStateStore = defineStore('gameState', () => {
   };
 
   const resetGame = () => {
-    currentPlayer.value = 1;
+    // startingPlayer determines who goes FIRST, not who is human
+    // 'red' = player 1 starts first, 'yellow' = player 2 starts first
+    const { startingPlayer } = storeToRefs(gameSettings);
+    currentPlayer.value = startingPlayer.value === 'red' ? 1 : 2;
     gameStatus.value = 'start';
     winner.value = null;
     winningCells.value = [];
     aiThinkingProgress.value = 0;
+    moveHistory.value = [];
+    historyIndex.value = -1;
     board.value = Array(boardSize.value.rows)
       .fill()
       .map(() => Array(boardSize.value.cols).fill(0));
