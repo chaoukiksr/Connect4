@@ -58,5 +58,14 @@
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue';
 import Navbar from '../components/Navbar.vue';
+import { useApi } from '../composables/useApi';
+const { fetchGames } = useApi();
+
+//fetch db games
+const games = ref([]);
+onMounted(async ()=>{
+   games.value = await fetchGames();
+})
 </script>

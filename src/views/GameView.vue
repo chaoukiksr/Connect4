@@ -105,6 +105,8 @@
 <script setup>
 import { ref } from 'vue';
 import Navbar from '../components/Navbar.vue'
+import { useAi } from '../composables/useAi';
+const {savedGameToDatabase} = useApi();
 import { useGameStateStore } from '../stores/gameState';
 import { useGameSettingsStore } from '../stores/gameSettings';
 import { storeToRefs } from 'pinia'
@@ -113,6 +115,7 @@ import { useFileManagement } from '../composables/useFileManagement'
 import { useGame } from '../composables/useGame'
 import QuitModal from '../components/QuitModal.vue';
 import { useRouter } from 'vue-router';
+import { useApi } from '../composables/useApi';
 const router = useRouter()
 const { download,save } = useFileManagement()
 const { startGame } = useGame()
@@ -158,8 +161,15 @@ const downloadGame = () =>{
    download()
 }
 
-const saveGame = ()=>{
+const saveGame = async ()=>{
    save()
+   const {ok,data} = await savedGameToDatabase();
+   if(ok){
+      console.log('Saved!', data);
+   }else{
+      console.error('Error: ', data.error);
+      
+   }
 }
 const quitGame = () =>{
    //show modal for eather save and quite, quit without saving, and cancel the quit operation

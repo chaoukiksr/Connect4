@@ -1,7 +1,7 @@
 import { ref } from "vue";
+import { storeToRefs} from 'pinia'
 import { useGameSettingsStore } from "../stores/gameSettings";
 import { useGameStateStore } from "../stores/gameState";
-import { storeToRefs} from 'pinia'
 export function useFileManagement () {
 
    const gameSettingsStore = useGameSettingsStore();
@@ -91,6 +91,9 @@ export function useFileManagement () {
       localStorage.setItem('games', JSON.stringify(existingGames));
       console.log('Game saved successfully');
       alert('game is saved')
+   }
+   const saveToDb = async () =>{
+      const move_sequence = getMoveSequenceFromMoveHistory();
    }
    return {download,upload,save}
 }

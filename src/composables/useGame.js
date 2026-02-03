@@ -13,7 +13,7 @@ export function useGame() {
   const { boardSize, aiDepth } = storeToRefs(gameSettingsStore);
   const { board, currentPlayer, gameStatus } = storeToRefs(gameStateStore);
   const { addMove, setAiThinkingProgress } = gameStateStore;
-
+  const {moveHistory} = storeToRefs(gameStateStore);
   const { checkProbableWin } = useWinCheck();
   const { getBestMove, getBestMoveAsync } = useMinimax(); // <- on récupère la fonction
 
@@ -71,6 +71,10 @@ export function useGame() {
       });
     }
   };
-
-  return { fillCol, isColAvailable, getAvailableCol, startGame };
+  const getMoveSequenceFromMoveHistory = () =>{
+    console.log('move hestory from the useGame: ',moveHistory);
+    
+    return moveHistory.value.map(move => move.col.toString()).join('');
+  }
+  return { fillCol, isColAvailable, getAvailableCol, startGame, getMoveSequenceFromMoveHistory };
 }
