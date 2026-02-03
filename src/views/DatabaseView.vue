@@ -17,15 +17,15 @@
             <!-- Stats -->
             <div class="grid grid-cols-3 gap-4 mb-6">
                <div class="bg-gray-50 rounded-xl p-4 text-center">
-                  <p class="text-3xl font-bold text-emerald-600">0</p>
+                  <p class="text-3xl font-bold text-emerald-600">{{ games.length }}</p>
                   <p class="text-gray-600">Parties</p>
                </div>
                <div class="bg-gray-50 rounded-xl p-4 text-center">
-                  <p class="text-3xl font-bold text-blue-600">0</p>
+                  <p class="text-3xl font-bold text-blue-600">{{(games.filter(game => game.status != 'in_progress')).length}}</p>
                   <p class="text-gray-600">Terminées</p>
                </div>
                <div class="bg-gray-50 rounded-xl p-4 text-center">
-                  <p class="text-3xl font-bold text-amber-600">0</p>
+                  <p class="text-3xl font-bold text-amber-600">{{ (games.filter(game => game.symmetric_game_id != null)).length }}</p>
                   <p class="text-gray-600">Symétriques</p>
                </div>
             </div>
