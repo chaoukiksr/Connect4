@@ -44,9 +44,11 @@
       <section class="max-w-4xl mx-auto">
          <div class="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">📋 Parties enregistrées</h2>
-            
+            <div v-if="games.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+               <GameCard v-for="game in games" :key="game.id" :game="game" @view="handleView" @delete="handleDelete" />
+            </div>
             <!-- Empty State -->
-            <div class="text-center py-12">
+            <div v-if="games.length == 0" class="text-center py-12">
                <p class="text-6xl mb-4">🎮</p>
                <p class="text-gray-500 text-lg">Aucune partie dans la base de données</p>
                <p class="text-gray-400">Jouez une partie ou importez un fichier</p>
@@ -61,11 +63,14 @@
 import { onMounted, ref } from 'vue';
 import Navbar from '../components/Navbar.vue';
 import { useApi } from '../composables/useApi';
+import GameCard from '../components/GameCard.vue';
 const { fetchGames } = useApi();
 
 //fetch db games
 const games = ref([]);
 onMounted(async ()=>{
+   
    games.value = await fetchGames();
+   console.log(games.value);
 })
 </script>
