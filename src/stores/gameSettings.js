@@ -4,7 +4,7 @@ import {ref} from 'vue'
 export const useGameSettingsStore = defineStore('gameSettings',()=>{
       const gameMode = ref(1) //default
       const startingPlayer= ref('red')
-      const boardSize = ref({rows:5, cols:6})
+      const boardSize = ref({rows:8, cols:9})
      
       const aiMode = ref('minimax') 
       const aiDepth = ref(5)

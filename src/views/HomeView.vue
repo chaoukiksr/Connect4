@@ -14,10 +14,17 @@
 
             <!-- Load Game Button -->
             <label
-               class="w-full block text-center bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 font-bold text-2xl py-5 px-8 rounded-xl shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
+               class="w-full block text-center bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 font-bold text-2xl py-5 px-8 rounded-xl shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer mb-4">
                📂 Charger une partie
                <input type="file" accept=".json" @change="(e) => upload(e, () => router.push('/game'))" class="hidden" />
             </label>
+
+            <!-- Database Button -->
+            <button 
+               @click="router.push('/database')"
+               class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold text-2xl py-5 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-purple-500/40">
+               🗄️ Gérer la base de données
+            </button>
 
             <NewGameSettingsModal v-if="isModalOpen" v-model="isModalOpen" @submit="startANewGame"/>
          </div>
