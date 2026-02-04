@@ -15,19 +15,12 @@
             </div>
 
             <!-- Stats -->
-            <div class="grid grid-cols-3 gap-4 mb-6">
-               <div class="bg-gray-50 rounded-xl p-4 text-center">
-                  <p class="text-3xl font-bold text-emerald-600">{{ games.length }}</p>
-                  <p class="text-gray-600">Parties</p>
-               </div>
-               <div class="bg-gray-50 rounded-xl p-4 text-center">
-                  <p class="text-3xl font-bold text-blue-600">{{(games.filter(game => game.status != 'in_progress')).length}}</p>
-                  <p class="text-gray-600">Terminées</p>
-               </div>
-               <div class="bg-gray-50 rounded-xl p-4 text-center">
-                  <p class="text-3xl font-bold text-amber-600">{{ (games.filter(game => game.symmetric_game_id != null)).length }}</p>
-                  <p class="text-gray-600">Symétriques</p>
-               </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+               <State color="emerald" label="Parties" :value="allGames.length" filterType="all" :active="activeFilter === 'all'" @apply-filter="handleApplyFilter" />
+               <State color="blue" label="Terminées" :value="allGames.filter(game => game.status !== 'in_progress').length" filterType="completed" :active="activeFilter === 'completed'" @apply-filter="handleApplyFilter" />
+               <State color="orange" label="En cours" :value="allGames.filter(game => game.status === 'in_progress').length" filterType="in_progress" :active="activeFilter === 'in_progress'" @apply-filter="handleApplyFilter" />
+               <State color="purple" label="Symétriques" :value="allGames.filter(game => game.symmetric_game_id != null).length" filterType="symmetric" :active="activeFilter === 'symmetric'" @apply-filter="handleApplyFilter" />
+               <State color="gray" label="Uniques" :value="allGames.filter(game => game.symmetric_game_id == null).length" filterType="unique" :active="activeFilter === 'unique'" @apply-filter="handleApplyFilter" />
             </div>
 
             <!-- Import Section -->
@@ -60,17 +53,39 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import Navbar from '../components/Navbar.vue';
 import { useApi } from '../composables/useApi';
-import GameCard from '../components/GameCard.vue';
+import GameCard from '../components/GameCard.vue'
+import State from '../components/State.vue';
 const { fetchGames } = useApi();
 
-//fetch db games
-const games = ref([]);
-onMounted(async ()=>{
-   
-   games.value = await fetchGames();
-   console.log(games.value);
-})
+// Store all games (never modified after fetch)
+const allGames = ref([]);
+const activeFilter = ref('all');
+
+// Computed filtered games based on active filter
+const games = computed(() => {
+   switch (activeFilter.value) {
+      case 'completed':
+         return allGames.value.filter(game => game.status !== 'in_progress');
+      case 'in_progress':
+         return allGames.value.filter(game => game.status === 'in_progress');
+      case 'symmetric':
+         return allGames.value.filter(game => game.symmetric_game_id != null);
+      case 'unique':
+         return allGames.value.filter(game => game.symmetric_game_id == null);
+      default:
+         return allGames.value;
+   }
+});
+
+onMounted(async () => {
+   allGames.value = await fetchGames();
+   console.log(allGames.value);
+});
+
+const handleApplyFilter = (filterType) => {
+   activeFilter.value = filterType;
+};
 </script>
