@@ -6,10 +6,10 @@ import { useGameStateStore } from "../stores/gameState";
 const API_URL = 'http://localhost:3000/api';
 
 export function useApi(){
-   // Must be INSIDE the function, not outside!
+
    const gameSettingsStore = useGameSettingsStore();
    const gameStateStore = useGameStateStore();
-   const { boardSize } = storeToRefs(gameSettingsStore);
+   const { boardSize,startingPlayer } = storeToRefs(gameSettingsStore);
    const { moveHistory } = storeToRefs(gameStateStore);
    const { getMoveSequenceFromMoveHistory } = useGame();
 
@@ -27,6 +27,7 @@ export function useApi(){
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({
             moveSequence,
+            startingPlayer:startingPlayer.value,
             boardRows: boardSize.value.rows,
             boardCols: boardSize.value.cols
          })
