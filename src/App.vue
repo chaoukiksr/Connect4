@@ -1,12 +1,8 @@
 <script setup>
-import HomeView from './views/HomeView.vue';
-import Game from './views/HomeView.vue';
-
- 
+import TestRandomGames from './components/TestRandomGames.vue';
 </script>
 
 <template>
-<router-view/>
+  <router-view/>
+  <TestRandomGames />
 </template>
-
- 

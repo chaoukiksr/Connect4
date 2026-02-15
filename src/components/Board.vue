@@ -23,7 +23,7 @@
       <Cell
         v-for="a in totalCells"
         :key="a"
-        :col="Math.floor((a - 1) % cols)"
+        :col="Math.floor((a - 1) % cols)" 
         :row="Math.floor((a - 1) / cols)"
         :boardValue="board[Math.floor((a - 1)/cols)][Math.floor((a - 1) % cols)]"
         :isWinning="winningCells.some(
@@ -35,7 +35,7 @@
       />
     </div>
 
-    <!-- Minimax Scores -->
+    <!-- Minimax Scores par collone -->
     <div
       class="grid gap-2 mt-2"
       :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
@@ -70,12 +70,15 @@ const props = defineProps({
   board: Array,
   boardSize: Object
 });
-
+/* Nombre de lignes */
 const rows = props.boardSize.rows;
+/* Nombre total de colonnes*/
 const cols = props.boardSize.cols;
+/* Nombre total de cellules */
 const totalCells = computed(() => cols * rows);
-
+/* Fonction pour remplir une colonne */
 const { fillCol } = useGame();
+/* Fonction Minimax pour calculer les scores */
 const { getColumnScoresAsync } = useMinimax();
 
 const gameState = useGameStateStore();
@@ -85,13 +88,14 @@ const { aiDepth } = storeToRefs(gameSettings);
 
 // Reactive column scores
 const columnScores = ref(Array(cols).fill(null));
+/* Indique si un calcul est en cours */
 let isCalculating = false;
 
-// Update scores whenever the board changes (only when game is playing)
+/* Surveille les changements du plateau */
 watch(
   () => props.board,
   async (newBoard) => {
-    // Skip if already calculating or game hasn't started
+  // Ignore si déjà en calcul ou si le jeu n’a pas commencé
     if (isCalculating || gameStatus.value === 'start') return;
     
     if (newBoard) {
@@ -106,7 +110,7 @@ watch(
   { deep: true }
 );
 
-// Also update when game status changes to playing
+/* Surveille le changement d’état du jeu */
 watch(
   () => gameStatus.value,
   async (status) => {

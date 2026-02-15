@@ -26,27 +26,31 @@ export function useGame() {
     }
     return cols;
   };
-
+/*Fonction appelée quand un joueur clique sur une colonne*/
   const fillCol = (col) => {
     if (gameStatus.value !== "playing") return;
+    /*Interdit de jouer dans une colonne pleine.*/
     if (!isColAvailable(col)) return;
 
-    // Reset progress when human plays
+    // Réinitialise la barre de progression IA.
     if (!isCurrentPlayerAI()) {
       setAiThinkingProgress(0);
     }
-
+//Parcourt la colonne de bas en haut.
     for (let r = boardSize.value.rows - 1; r >= 0; r--) {
+      //Place le pion.
       if (board.value[r][col] === 0) {
         board.value[r][col] = currentPlayer.value;
+        //ajout le coup a lhistorique
         addMove(r, col, currentPlayer.value);
         checkProbableWin(r, col, currentPlayer.value);
-
+//Change de joueur.
         currentPlayer.value = currentPlayer.value === 1 ? 2 : 1;
-
+//si cest le tour de l'AI
         if (gameStatus.value === "playing" && isCurrentPlayerAI()) {
           triggerAIMove(async () => {
             setAiThinkingProgress(0);
+            //Calcule la meilleure colonne avec Minimax.
             const aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
               setAiThinkingProgress(progress);
             });
