@@ -37,5 +37,12 @@ export function useApi(){
       return { ok: response.ok, data };
    }
 
-   return { fetchGames, savedGameToDatabase };
+   // Fetch all situations for a given game (by id_partie)
+   const fetchSituationsByGame = async (id_partie) => {
+      const response = await fetch(`${API_URL}/games/${id_partie}/situations`);
+      const data = await response.json();
+      return data.situations || [];
+   }
+
+   return { fetchGames, savedGameToDatabase, fetchSituationsByGame };
 }

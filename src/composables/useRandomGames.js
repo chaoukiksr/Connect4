@@ -33,7 +33,8 @@ export function useRandomGames() {
       const game = generateRandomGame();
       save(game); // sauvegarde dans localStorage
     }
-    alert(`${n} parties aléatoires ont été générées !`);
+    console.log('des parite ont été génerer');
+    
   };
 
   return { generateMultipleGames };

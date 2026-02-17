@@ -49,16 +49,62 @@
          </div>
       </section>
 
+      <!-- Situation Viewer -->
+      <section v-if="selectedGame && situations.length" class="max-w-4xl mx-auto mt-8">
+         <div class="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">🔎 Parcourir la partie #{{ selectedGame.id_partie }}</h2>
+            <div class="flex flex-col items-center">
+               <Board :board="currentBoard" :boardSize="[selectedGame.board_rows || 6, selectedGame.board_cols || 7]" />
+               <div class="flex gap-4 mt-4">
+                  <button @click="goToPrevSituation" :disabled="!currentSituation || !currentSituation.precedent" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">⬅️ Précédent</button>
+                  <span class="font-mono">Coup {{ currentSituation ? currentSituation.numero_coup : '' }}</span>
+                  <button @click="goToNextSituation" :disabled="!currentSituation || !currentSituation.suivant" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">Suivant ➡️</button>
+               </div>
+            </div>
+         </div>
+      </section>
    </main>
 </template>
 
 <script setup>
+import Board from '../components/Board.vue';
+import { useApi } from '../composables/useApi';
+
+const { fetchGames, fetchSituationsByGame } = useApi();
+
+const selectedGame = ref(null);
+const situations = ref([]);
+const currentSituationIndex = ref(0);
+
+const currentSituation = computed(() => situations.value[currentSituationIndex.value] || null);
+
+const currentBoard = computed(() => {
+   if (!currentSituation.value) return [];
+   // Plateau is stored as a string, parse to 2D array
+   try {
+      return JSON.parse(currentSituation.value.plateau);
+   } catch {
+      return [];
+   }
+});
+
+const goToPrevSituation = () => {
+   if (currentSituation.value && currentSituation.value.precedent != null) {
+      const idx = situations.value.findIndex(s => s.id_situation === currentSituation.value.precedent);
+      if (idx !== -1) currentSituationIndex.value = idx;
+   }
+};
+const goToNextSituation = () => {
+   if (currentSituation.value && currentSituation.value.suivant != null) {
+      const idx = situations.value.findIndex(s => s.id_situation === currentSituation.value.suivant);
+      if (idx !== -1) currentSituationIndex.value = idx;
+   }
+};
 import { onMounted, ref, computed } from 'vue';
 import Navbar from '../components/Navbar.vue';
-import { useApi } from '../composables/useApi';
 import GameCard from '../components/GameCard.vue'
 import State from '../components/State.vue';
-const { fetchGames } = useApi();
+
 
 // Store all games (never modified after fetch)
 const allGames = ref([]);
@@ -80,12 +126,26 @@ const games = computed(() => {
    }
 });
 
+
 onMounted(async () => {
    allGames.value = await fetchGames();
-   console.log(allGames.value);
 });
+
+const handleView = async (game) => {
+   selectedGame.value = game;
+   // Fetch situations for this game
+   situations.value = await fetchSituationsByGame(game.id_partie);
+   // Start at the first situation (numero_coup === 1 or lowest numero_coup)
+   let idx = situations.value.findIndex(s => s.numero_coup === 1);
+   if (idx === -1) idx = 0;
+   currentSituationIndex.value = idx;
+};
 
 const handleApplyFilter = (filterType) => {
    activeFilter.value = filterType;
+};
+
+const handleDelete = (id) => {
+   // TODO: implement delete logic if needed
 };
 </script>

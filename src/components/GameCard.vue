@@ -92,24 +92,11 @@ const props = defineProps({
 
 defineEmits(['view', 'delete']);
 
-// Replay game to get board state for preview
+// No move_sequence or board size available, so just show a placeholder preview
 const boardPreview = computed(() => {
-   const { move_sequence, board_rows, board_cols } = props.game;
-   const board = Array(board_rows).fill(null).map(() => Array(board_cols).fill(0));
-   
-   for (let i = 0; i < move_sequence.length; i++) {
-      const col = parseInt(move_sequence[i]);
-      const player = (i % 2 === 0) ? 1 : 2;
-      
-      for (let row = board_rows - 1; row >= 0; row--) {
-         if (board[row][col] === 0) {
-            board[row][col] = player;
-            break;
-         }
-      }
-   }
-   
-   return board.flat();
+   // Default to 6x7 empty board
+   const rows = 6, cols = 7;
+   return Array(rows * cols).fill(0);
 });
 
 // Result display
@@ -131,9 +118,9 @@ const resultClass = computed(() => {
    return map[props.game.result] || 'text-gray-400';
 });
 
-// Truncate long sequences
-const truncatedSequence = computed(() => {
-   const seq = props.game.move_sequence;
+// Truncate signature
+const truncatedSignature = computed(() => {
+   const seq = props.game.signature || '';
    return seq.length > 10 ? seq.slice(0, 10) + '...' : seq;
 });
 </script>

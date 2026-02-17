@@ -90,7 +90,7 @@ export function useFileManagement () {
       existingGames.push(data);
       localStorage.setItem('games', JSON.stringify(existingGames));
       console.log('Game saved successfully');
-      alert('game is saved')
+      
    }
    const saveToDb = async () =>{
       const move_sequence = getMoveSequenceFromMoveHistory();
