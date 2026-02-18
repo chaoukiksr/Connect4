@@ -4,5 +4,5 @@ import TestRandomGames from './components/TestRandomGames.vue';
 
 <template>
   <router-view/>
-  <TestRandomGames />
+  <!-- <TestRandomGames /> -->
 </template>

@@ -8,21 +8,21 @@
 
             <!-- Start New Game Button -->
             <button @click="()=>{isModalOpen = !isModalOpen ;startANewGame; console.log('modal toggled')}"
-               class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-2xl py-5 px-8 rounded-xl mb-4 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-emerald-500/40">
-               🎮 Nouvelle Partie
+               class="w-full bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-2xl py-5 px-8 rounded-xl mb-4 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-emerald-500/40">
+                  🎮 Nouvelle Partie
             </button>
 
             <!-- Load Game Button -->
             <label
                class="w-full block text-center bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 font-bold text-2xl py-5 px-8 rounded-xl shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer mb-4">
-               📂 Charger une partie
+                  📂 Charger une partie
                <input type="file" accept=".json" @change="(e) => upload(e, () => router.push('/game'))" class="hidden" />
             </label>
 
             <!-- Database Button -->
             <button 
                @click="router.push('/database')"
-               class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold text-2xl py-5 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-purple-500/40">
+                  class="w-full bg-linear-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold text-2xl py-5 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-purple-500/40">
                🗄️ Gérer la base de données
             </button>
 

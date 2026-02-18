@@ -12,14 +12,21 @@ export function useRandomGames() {
       Array(cols).fill().map(() => Math.floor(Math.random() * 3)) // 0,1,2
     );
 
+    // Generate a random sequence of move numbers (0-6 are valid columns)
+    const moveCount = Math.floor(Math.random() * 20) + 5; // 5-24 moves
+    const moveSequence = [];
+    for (let i = 0; i < moveCount; i++) {
+      moveSequence.push(Math.floor(Math.random() * 7)); // columns 0-6
+    }
+
     return {
       id: Date.now() + Math.floor(Math.random() * 1000),
       gameStatus: 'finished',
       currentPlayer: Math.floor(Math.random() * 2) + 1,
       winner: Math.floor(Math.random() * 2) + 1,
       board,
-      history: [],
-      historyIndex: -1,
+      history: moveSequence, // Array of move numbers: [0, 1, 2, 0, ...]
+      historyIndex: moveSequence.length - 1,
       aiDepth: 5,
       aiMode: 'minimax',
       boardSize: { rows, cols },

@@ -8,7 +8,7 @@
             <div class="flex justify-between items-center mb-6">
                <h1 class="text-3xl font-bold text-gray-800">🗄️ Base de Données</h1>
                <button 
-                  class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+                    class="bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5"
                >
                   🔄 Rafraîchir
                </button>
@@ -17,10 +17,10 @@
             <!-- Stats -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
                <State color="emerald" label="Parties" :value="allGames.length" filterType="all" :active="activeFilter === 'all'" @apply-filter="handleApplyFilter" />
-               <State color="blue" label="Terminées" :value="allGames.filter(game => game.status !== 'in_progress').length" filterType="completed" :active="activeFilter === 'completed'" @apply-filter="handleApplyFilter" />
+               <State color="blue" label="Terminées" :value="allGames.filter(game => game.status === 'finished').length" filterType="completed" :active="activeFilter === 'completed'" @apply-filter="handleApplyFilter" />
                <State color="orange" label="En cours" :value="allGames.filter(game => game.status === 'in_progress').length" filterType="in_progress" :active="activeFilter === 'in_progress'" @apply-filter="handleApplyFilter" />
-               <State color="purple" label="Symétriques" :value="allGames.filter(game => game.symmetric_game_id != null).length" filterType="symmetric" :active="activeFilter === 'symmetric'" @apply-filter="handleApplyFilter" />
-               <State color="gray" label="Uniques" :value="allGames.filter(game => game.symmetric_game_id == null).length" filterType="unique" :active="activeFilter === 'unique'" @apply-filter="handleApplyFilter" />
+               <State color="purple" label="Random" :value="allGames.filter(game => game.type_partie === 'random').length" filterType="random" :active="activeFilter === 'random'" @apply-filter="handleApplyFilter" />
+               <State color="gray" label="BGA" :value="allGames.filter(game => game.type_partie === 'BGA').length" filterType="bga" :active="activeFilter === 'bga'" @apply-filter="handleApplyFilter" />
             </div>
 
             <!-- Import Section -->
@@ -54,7 +54,7 @@
          <div class="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
             <h2 class="text-xl font-bold text-gray-800 mb-4">🔎 Parcourir la partie #{{ selectedGame.id_partie }}</h2>
             <div class="flex flex-col items-center">
-               <Board :board="currentBoard" :boardSize="[selectedGame.board_rows || 6, selectedGame.board_cols || 7]" />
+               <Board :board="currentBoard" :boardSize="[6, 7]" />
                <div class="flex gap-4 mt-4">
                   <button @click="goToPrevSituation" :disabled="!currentSituation || !currentSituation.precedent" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">⬅️ Précédent</button>
                   <span class="font-mono">Coup {{ currentSituation ? currentSituation.numero_coup : '' }}</span>
@@ -133,9 +133,8 @@ onMounted(async () => {
 
 const handleView = async (game) => {
    selectedGame.value = game;
-   // Fetch situations for this game
+   // Always use id_partie for fetching situations
    situations.value = await fetchSituationsByGame(game.id_partie);
-   // Start at the first situation (numero_coup === 1 or lowest numero_coup)
    let idx = situations.value.findIndex(s => s.numero_coup === 1);
    if (idx === -1) idx = 0;
    currentSituationIndex.value = idx;
