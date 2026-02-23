@@ -18,7 +18,7 @@ export async function insertAllLocalGames() {
       winningCells: JSON.stringify([]), // or extract from game if available
     };
     try {
-      const response = await fetch('http://localhost:3000/api/games', {
+      const response = await fetch('https://connect4-backend-xodq.onrender.com/api/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)

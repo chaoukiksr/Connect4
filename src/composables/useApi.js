@@ -3,7 +3,7 @@ import { useGameSettingsStore } from "../stores/gameSettings.js";
 import { storeToRefs } from "pinia";
 import { useGameStateStore } from "../stores/gameState.js";
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://connect4-backend-xodq.onrender.com/api';
 
 export function useApi(){
 

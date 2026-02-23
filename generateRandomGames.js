@@ -2,7 +2,7 @@
 import fetch from 'node-fetch'; // si Node 18+, tu peux utiliser fetch directement
 import { useRandomGames } from './src/composables/useRandomGames.js'; // chemin vers ton composable
 
-const API_URL = 'http://localhost:3000/api/games'; // ton endpoint API
+const API_URL = 'https://connect4-backend-xodq.onrender.com/api/games'; // ton endpoint API
 
 async function main() {
   const { generateMultipleGames } = useRandomGames();
