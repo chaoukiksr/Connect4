@@ -1,4 +1,33 @@
 @import "tailwindcss";
+
 body {
-            font-family: 'Poppins', sans-serif;
-        }
+  font-family: 'Poppins', sans-serif;
+  background-color: #0f172a;
+  color: #f1f5f9;
+  min-height: 100vh;
+}
+
+/* Smooth drop animation for pieces */
+@keyframes drop-in {
+  from { transform: translateY(-60px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.piece-drop {
+  animation: drop-in 0.2s ease-out;
+}
+
+/* Winning cell pulse */
+@keyframes win-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6); }
+  50%       { box-shadow: 0 0 0 8px rgba(250, 204, 21, 0); }
+}
+
+.winning-pulse {
+  animation: win-pulse 1s ease-in-out infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1e293b; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }

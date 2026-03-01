@@ -1,36 +1,53 @@
 <template>
 <Navbar/>
-  <main class="container mx-auto px-4 py-12">
+  <main class="min-h-screen bg-slate-900 px-4 py-12">
+
+      <!-- Hero -->
+      <div class="text-center mb-12">
+         <h2 class="text-5xl font-extrabold mb-3">
+            <span class="text-red-500">C</span><span class="text-yellow-400">O</span><span class="text-red-500">N</span><span class="text-yellow-400">N</span><span class="text-red-500">E</span><span class="text-yellow-400">C</span><span class="text-red-500">T</span><span class="text-white"> 4</span>
+         </h2>
+         <p class="text-slate-400 text-lg">Alignez 4 pions et gagnez !</p>
+      </div>
 
       <!-- Actions Section -->
-      <section class="max-w-lg mx-auto mb-16">
-         <div class="bg-white rounded-2xl shadow-2xl p-10 border border-gray-100">
+      <section class="max-w-md mx-auto mb-16">
+         <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-8 space-y-4">
 
             <!-- Start New Game Button -->
-            <button @click="()=>{isModalOpen = !isModalOpen ;startANewGame; console.log('modal toggled')}"
-               class="w-full bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-2xl py-5 px-8 rounded-xl mb-4 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-emerald-500/40">
+            <button @click="()=>{isModalOpen = !isModalOpen; console.log('modal toggled')}"
+               class="w-full bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-xl py-4 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-emerald-500/30">
                   🎮 Nouvelle Partie
             </button>
 
             <!-- Load Game Button -->
             <label
-               class="w-full block text-center bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 font-bold text-2xl py-5 px-8 rounded-xl shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer mb-4">
+               class="w-full flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 font-bold text-xl py-4 px-8 rounded-xl shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer">
                   📂 Charger une partie
                <input type="file" accept=".json" @change="(e) => upload(e, () => router.push('/game'))" class="hidden" />
             </label>
 
-            <!-- Database Button -->
-            <button 
+            <!-- BGA Button -->
+            <button
+               @click="router.push('/bga')"
+               class="w-full bg-linear-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white font-bold text-xl py-4 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sky-500/30">
+               🔍 Rejouer une partie BGA
+            </button>
+
+            <!-- Database Button (admin only) -->
+            <button
+               v-if="isAdmin"
                @click="router.push('/database')"
-                  class="w-full bg-linear-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold text-2xl py-5 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-purple-500/40">
+               class="w-full bg-linear-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold text-xl py-4 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-purple-500/30">
                🗄️ Gérer la base de données
             </button>
 
             <NewGameSettingsModal v-if="isModalOpen" v-model="isModalOpen" @submit="startANewGame"/>
          </div>
       </section>
+
       <SavedGameList :games="games" @load-game="loadGame" @delete-game="deleteGame" />
-      </main>
+   </main>
 </template>
 
 <script setup>
@@ -41,9 +58,11 @@
    import NewGameSettingsModal from '../components/NewGameSettingsModal.vue';
    import { onMounted, ref } from 'vue';
    const games = ref([])
+   const isAdmin = ref(false);
    onMounted(()=>{
       const storedGames = localStorage.getItem('games');
       games.value = storedGames ? JSON.parse(storedGames) : [];
+      isAdmin.value = localStorage.getItem('role') === 'admin';
       console.log(games.value);
       
    })

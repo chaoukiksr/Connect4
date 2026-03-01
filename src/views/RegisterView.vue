@@ -18,7 +18,7 @@
           <label for="password" class="block mb-2 font-medium">Password</label>
           <input v-model="password" id="password" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-lg focus:outline-none focus:ring-2 focus:ring-emerald-400" />
         </div>
-        <button type="submit" class="w-full py-3 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-md shadow-xl hover:from-emerald-600 hover:to-emerald-700 transition">
+        <button type="submit" class="w-full py-3 mt-2 bg-linear-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-md shadow-xl hover:from-emerald-600 hover:to-emerald-700 transition">
           {{ isLoginMode ? 'Login' : 'Register' }}
         </button>
       </form>
@@ -48,7 +48,9 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
+const router = useRouter();
 
 const username = ref('');
 const email = ref('');
@@ -123,10 +125,18 @@ const loginUser = async () => {
     modalType.value = 'success';
     modalMessage.value = data.message || 'Login successful!';
     showModal.value = true;
-    // Optionally, redirect or close modal after login
+    localStorage.setItem('token', data.token);
+    if (data.role) {
+      localStorage.setItem('role', data.role);
+    }
+    // Redirect based on role after short delay
     setTimeout(() => {
       showModal.value = false;
-      // Redirect logic here if needed
+      if (data.role === 'admin') {
+        router.push({ name: 'database' });
+      } else {
+        router.push({ name: 'home' });
+      }
     }, 1500);
   } catch (error) {
     modalType.value = 'error';

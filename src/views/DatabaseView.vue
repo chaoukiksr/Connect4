@@ -67,8 +67,31 @@
 </template>
 
 <script setup>
-import Board from '../components/Board.vue';
-import { useApi } from '../composables/useApi';
+
+const router = useRouter();
+
+// Restrict access to admin only by checking backend
+onMounted(async () => {
+   const token = localStorage.getItem('token');
+   if (!token) {
+      router.push({ name: 'home' });
+      return;
+   }
+   try {
+      // Try to fetch games (admin-only route)
+      const response = await fetch('http://localhost:3000/api/games', {
+         headers: {
+            'Authorization': `Bearer ${token}`
+         }
+      });
+      if (response.status === 403 || response.status === 401) {
+         router.push({ name: 'home' });
+      }
+      // If not admin, backend will block
+   } catch (e) {
+      router.push({ name: 'home' });
+   }
+});
 
 const { fetchGames, fetchSituationsByGame } = useApi();
 
@@ -100,11 +123,6 @@ const goToNextSituation = () => {
       if (idx !== -1) currentSituationIndex.value = idx;
    }
 };
-import { onMounted, ref, computed } from 'vue';
-import Navbar from '../components/Navbar.vue';
-import GameCard from '../components/GameCard.vue'
-import State from '../components/State.vue';
-
 
 // Store all games (never modified after fetch)
 const allGames = ref([]);
@@ -125,7 +143,6 @@ const games = computed(() => {
          return allGames.value;
    }
 });
-
 
 onMounted(async () => {
    allGames.value = await fetchGames();

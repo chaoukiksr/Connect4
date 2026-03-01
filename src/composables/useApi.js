@@ -14,7 +14,10 @@ export function useApi(){
    const { getMoveSequenceFromMoveHistory } = useGame();
 
    const fetchGames = async () => {
-      const response = await fetch(`${API_URL}/games`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/games`, {
+         headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       return data.games || [];
    }

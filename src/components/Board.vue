@@ -1,56 +1,59 @@
 <template>
-  <div class="bg-white">
+  <div class="bg-slate-900 rounded-xl">
 
     <!-- Numéros des colonnes -->
     <div
-      class="grid gap-2 mb-2"
+      class="grid gap-1.5 mb-2"
       :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
     >
       <div
         v-for="col in cols"
         :key="col"
-        class="text-center font-bold text-gray-700"
+        class="text-center text-xs font-bold text-slate-500"
       >
         {{ col }}
       </div>
     </div>
 
-    <!-- Grille -->
-    <div
-      class="grid gap-2"
-      :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
-    >
-      <Cell
-        v-for="a in totalCells"
-        :key="a"
-        :col="Math.floor((a - 1) % cols)" 
-        :row="Math.floor((a - 1) / cols)"
-        :boardValue="board[Math.floor((a - 1)/cols)][Math.floor((a - 1) % cols)]"
-        :isWinning="winningCells.some(
-          c =>
-            c.row === Math.floor((a - 1) / cols) &&
-            c.col === Math.floor((a - 1) % cols)
-        )"
-        @cell-clicked="fillColumn"
-      />
+    <!-- Board frame -->
+    <div class="bg-blue-900 rounded-xl p-3 shadow-inner shadow-blue-950">
+      <!-- Grille -->
+      <div
+        class="grid gap-1.5"
+        :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
+      >
+        <Cell
+          v-for="a in totalCells"
+          :key="a"
+          :col="Math.floor((a - 1) % cols)"
+          :row="Math.floor((a - 1) / cols)"
+          :boardValue="board[Math.floor((a - 1)/cols)][Math.floor((a - 1) % cols)]"
+          :isWinning="winningCells.some(
+            c =>
+              c.row === Math.floor((a - 1) / cols) &&
+              c.col === Math.floor((a - 1) % cols)
+          )"
+          @cell-clicked="fillColumn"
+        />
+      </div>
     </div>
 
-    <!-- Minimax Scores par collone -->
+    <!-- Minimax Scores par colonne -->
     <div
-      class="grid gap-2 mt-2"
+      class="grid gap-1.5 mt-2"
       :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
     >
       <div
         v-for="(score, index) in columnScores"
         :key="index"
-        class="text-center font-bold p-2 text-sm"
+        class="text-center font-bold text-xs py-1"
         :class="{
-          'text-green-600': score !== null && score > 0,
-          'text-red-600': score !== null && score < 0,
-          'text-gray-500': score === null || score === 0
+          'text-emerald-400': score !== null && score > 0,
+          'text-red-400':     score !== null && score < 0,
+          'text-slate-600':   score === null || score === 0
         }"
       >
-        {{ score !== null ? score : '-' }}
+        {{ score !== null ? score : '·' }}
       </div>
     </div>
   </div>

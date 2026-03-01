@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue';
 import GameView from '../views/GameView.vue';
 import DatabaseView from '../views/DatabaseView.vue';
 import RegisterView from '../views/RegisterView.vue';
+import BgaView from '../views/BgaView.vue';
 
 const router = createRouter({
    history:createWebHistory(),
@@ -27,6 +28,11 @@ const router = createRouter({
          path:'/register',
          component:RegisterView,
          name:'register'
+      },
+      {
+         path:'/bga',
+         component:BgaView,
+         name:'bga'
       }
    ]
 })

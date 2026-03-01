@@ -12,7 +12,7 @@ export function useGame() {
 
   const { boardSize, aiDepth } = storeToRefs(gameSettingsStore);
   const { board, currentPlayer, gameStatus } = storeToRefs(gameStateStore);
-  const { addMove, setAiThinkingProgress } = gameStateStore;
+  const { addMove, setAiThinkingProgress, addLog } = gameStateStore;
   const {moveHistory} = storeToRefs(gameStateStore);
   const { checkProbableWin } = useWinCheck();
   const { getBestMove, getBestMoveAsync } = useMinimax(); // <- on récupère la fonction
@@ -43,6 +43,7 @@ export function useGame() {
         board.value[r][col] = currentPlayer.value;
         //ajout le coup a lhistorique
         addMove(r, col, currentPlayer.value);
+        addLog(`${currentPlayer.value === 1 ? '🔴 Rouge' : '🟡 Jaune'} joue en colonne ${col + 1}`);
         checkProbableWin(r, col, currentPlayer.value);
 //Change de joueur.
         currentPlayer.value = currentPlayer.value === 1 ? 2 : 1;

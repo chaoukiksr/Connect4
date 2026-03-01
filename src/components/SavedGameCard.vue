@@ -1,25 +1,28 @@
 <template>
    <div @click="$emit('load', game.id)"
-      class="bg-white rounded-xl p-8 cursor-pointer shadow-lg border border-gray-100 hover:border-emerald-400 transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl">
+      class="bg-slate-800 border border-slate-700 rounded-xl p-5 cursor-pointer transition-all duration-200 hover:border-emerald-500/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-900/20">
 
       <div class="flex items-center justify-between mb-4">
-         <span class="text-3xl">{{ game.gameStatus === 'finished' ? '🏆' : '🎲' }}</span>
+         <span class="text-2xl">{{ game.gameStatus === 'finished' ? '🏆' : '🎲' }}</span>
          <span
-            :class="game.gameStatus === 'finished' ? 'text-yellow-600 bg-yellow-50' : 'text-emerald-600 bg-emerald-50'"
-            class="text-xs font-semibold px-3 py-1 rounded-full">
+            :class="game.gameStatus === 'finished'
+               ? 'text-yellow-400 bg-yellow-900/40 border border-yellow-700/30'
+               : 'text-emerald-400 bg-emerald-900/40 border border-emerald-700/30'"
+            class="text-xs font-semibold px-2.5 py-0.5 rounded-full">
             {{ game.gameStatus === 'finished' ? 'Terminée' : 'En cours' }}
          </span>
       </div>
 
-      <h3 class="text-xl font-bold text-gray-800 mb-2">{{ game.id }}</h3>
+      <h3 class="text-sm font-bold text-slate-200 mb-2 truncate">{{ game.id }}</h3>
 
-      <p class="text-sm text-gray-500 mb-1">
+      <p class="text-xs text-slate-400 mb-1">
          {{ getGameModeText(game.gameMode) }}
       </p>
 
-      <p class="text-xs text-gray-400">{{ formatDate(game.id) }}</p>
+      <p class="text-xs text-slate-600">{{ formatDate(game.id) }}</p>
 
-      <button @click.stop="$emit('delete', game.id)" class="mt-2 text-xs text-red-500 hover:text-red-700">
+      <button @click.stop="$emit('delete', game.id)"
+         class="mt-4 text-xs text-red-500 hover:text-red-400 transition-colors font-medium">
          🗑️ Supprimer
       </button>
    </div>

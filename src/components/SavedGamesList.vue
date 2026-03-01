@@ -1,25 +1,24 @@
 <template>
-   <section class="max-w-7xl mx-auto">
+   <section class="max-w-5xl mx-auto">
 
       <!-- Section Title -->
-      <div class="text-center mb-8">
-         <h2 class="text-4xl font-bold text-gray-800 mb-2">
-            Parties sauvegardées
-         </h2>
-         <div class="w-24 h-1 bg-gradient-to-r from-emerald-500 to-emerald-600 mx-auto rounded-full"></div>
+      <div class="mb-8">
+         <h2 class="text-2xl font-bold text-white mb-1">Parties sauvegardées</h2>
+         <div class="w-16 h-0.5 bg-linear-to-r from-emerald-500 to-transparent rounded-full"></div>
       </div>
 
       <!-- Saved Games Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
          <!-- Game Cards -->
          <SavedGameCard v-for="game in games" :key="game.id" :game="game" @load="$emit('load-game', $event)"
             @delete="$emit('delete-game', $event)" />
 
          <!-- No games message -->
-         <div v-if="games.length === 0" class="col-span-full text-center py-12">
-            <p class="text-gray-400 text-lg">Aucune partie sauvegardée</p>
-            <p class="text-gray-300 text-sm mt-2">Commencez une nouvelle partie et sauvegardez-la !</p>
+         <div v-if="games.length === 0" class="col-span-full text-center py-16">
+            <p class="text-4xl mb-4">🎮</p>
+            <p class="text-slate-400 text-base">Aucune partie sauvegardée</p>
+            <p class="text-slate-600 text-sm mt-1">Commencez une nouvelle partie et sauvegardez-la !</p>
          </div>
 
       </div>
