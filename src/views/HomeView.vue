@@ -119,7 +119,8 @@ import { storeToRefs } from 'pinia';
          startingPlayer:data.startingPlayer,
          boardSize:{rows:data.rows, cols:data.columns},
          aiMode:data.aiMode,
-         aiDepth:data.aiDepth
+         aiDepth:data.aiDepth,
+         humanPlayer:data.humanPlayer ?? 1
       })
       
       // Recreate the board with new dimensions

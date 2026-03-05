@@ -9,14 +9,19 @@
       <div
         v-for="col in cols"
         :key="col"
-        class="text-center text-xs font-bold text-slate-500"
+        class="text-center text-xs font-bold transition-colors duration-200"
+        :class="suggestedCol === col - 1
+          ? 'text-emerald-400 animate-pulse'
+          : 'text-slate-500'"
       >
         {{ col }}
+        <span v-if="suggestedCol === col - 1" class="block text-[9px] leading-none">▼</span>
       </div>
     </div>
 
     <!-- Board frame -->
-    <div class="bg-blue-900 rounded-xl p-3 shadow-inner shadow-blue-950">
+    <div class="bg-blue-900 rounded-xl p-3 shadow-inner shadow-blue-950"
+         :class="{ 'ring-2 ring-yellow-400/40': paintMode }">
       <!-- Grille -->
       <div
         class="grid gap-1.5"
@@ -33,7 +38,9 @@
               c.row === Math.floor((a - 1) / cols) &&
               c.col === Math.floor((a - 1) % cols)
           )"
-          @cell-clicked="fillColumn"
+          :isSuggestedCol="!paintMode && suggestedCol === Math.floor((a - 1) % cols)"
+          :paintMode="paintMode"
+          @cell-clicked="handleCellClick"
         />
       </div>
     </div>
@@ -53,7 +60,7 @@
           'text-slate-600':   score === null || score === 0
         }"
       >
-        {{ score !== null ? score : '·' }}
+        {{ score !== null ? score : '\u00b7' }}
       </div>
     </div>
   </div>
@@ -71,8 +78,12 @@ import { ref } from 'vue';
 
 const props = defineProps({
   board: Array,
-  boardSize: Object
+  boardSize: Object,
+  suggestedCol: { type: Number, default: null },
+  paintMode:    { type: Boolean, default: false },
 });
+
+const emit = defineEmits(['paint-cell']);
 /* Nombre de lignes */
 const rows = props.boardSize.rows;
 /* Nombre total de colonnes*/
@@ -98,8 +109,8 @@ let isCalculating = false;
 watch(
   () => props.board,
   async (newBoard) => {
-  // Ignore si déjà en calcul ou si le jeu n’a pas commencé
-    if (isCalculating || gameStatus.value === 'start') return;
+  // Ignore si déjà en calcul, si le jeu n'a pas commencé, ou en paint mode
+    if (isCalculating || gameStatus.value === 'start' || props.paintMode) return;
     
     if (newBoard) {
       isCalculating = true;
@@ -127,6 +138,14 @@ watch(
     }
   }
 );
+
+const handleCellClick = ({ row, col }) => {
+  if (props.paintMode) {
+    emit('paint-cell', { row, col });
+  } else {
+    fillCol(col);
+  }
+};
 
 const fillColumn = (col) => {
   fillCol(col);

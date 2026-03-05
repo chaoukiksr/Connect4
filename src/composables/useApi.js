@@ -36,9 +36,13 @@ export function useApi(){
       
       console.log('from useApi: ',moveSequence ,' ',gameMode.value, ' ',status,' ', winner.value,' ',ligneGagnante);
       
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/games`, {
          method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
+         headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+         },
          body: JSON.stringify({
             signature: moveSequence,
             mode: "BGA",

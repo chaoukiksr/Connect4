@@ -67,6 +67,27 @@
         </div>
       </div>
 
+      <!-- Je joue en tant que (PvE seulement) -->
+      <div v-if="formData.gameMode === 1">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Je joue en tant que</label>
+        <div class="flex gap-2">
+          <button @click="formData.humanPlayer = 1"
+            class="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-bold border transition-all"
+            :class="formData.humanPlayer === 1
+              ? 'bg-red-700/60 border-red-500 text-white'
+              : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">
+            <span class="w-3 h-3 rounded-full bg-red-500"></span> Rouge (1er)
+          </button>
+          <button @click="formData.humanPlayer = 2"
+            class="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-bold border transition-all"
+            :class="formData.humanPlayer === 2
+              ? 'bg-yellow-700/60 border-yellow-400 text-white'
+              : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">
+            <span class="w-3 h-3 rounded-full bg-yellow-400"></span> Jaune (2ème)
+          </button>
+        </div>
+      </div>
+
       <!-- Paramètres IA -->
       <div v-if="formData.gameMode !== 2" class="space-y-5">
         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Paramètres IA</label>
@@ -147,10 +168,11 @@ const isOpen = computed({
   set: (value) => emit("update:modelValue", value)
 })
 
-/* form data (MISSION 3.1) */
+/* form data */
 const formData = reactive({
   gameMode: 1,
   startingPlayer: "red",
+  humanPlayer: 1,     // 1 = human plays Red, 2 = human plays Yellow
 
   // grille fixée 9x9
   rows: 9,

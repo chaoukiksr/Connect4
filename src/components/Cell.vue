@@ -1,8 +1,13 @@
 <template>
   <div
-    @click="emit('cell-clicked', col)"
-    class="aspect-square rounded-full bg-blue-950/80 flex items-center justify-center cursor-pointer transition-all duration-150 hover:bg-blue-800/60 group"
-    :class="{ 'ring-2 ring-yellow-300 shadow-lg shadow-yellow-300/40 scale-105': isWinning }"
+    @click="handleClick"
+    class="aspect-square rounded-full flex items-center justify-center cursor-pointer transition-all duration-150 group"
+    :class="[
+      isSuggestedCol && boardValue === 0
+        ? 'bg-emerald-900/40 hover:bg-emerald-800/50 ring-1 ring-emerald-500/30'
+        : 'bg-blue-950/80 hover:bg-blue-800/60',
+      { 'ring-2 ring-yellow-300 shadow-lg shadow-yellow-300/40 scale-105': isWinning }
+    ]"
   >
     <div
       class="w-5/6 h-5/6 rounded-full shadow-inner transition-all duration-200"
@@ -20,8 +25,15 @@ const props = defineProps({
   boardValue: Number,
   col: Number,
   row: Number,
-  isWinning: Boolean
+  isWinning: Boolean,
+  isSuggestedCol: { type: Boolean, default: false },
+  paintMode: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['cell-clicked']);
+
+const handleClick = () => {
+  // In paint mode we emit row+col; in normal mode we emit col only (for gravity)
+  emit('cell-clicked', props.paintMode ? { col: props.col, row: props.row } : { col: props.col, row: props.row });
+};
 </script>

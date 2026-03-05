@@ -9,7 +9,7 @@ export function useGameFlow() {
    const gameStateStore = useGameStateStore();
    const gameSettingsStore = useGameSettingsStore();
    const { currentPlayer, gameStatus, board } = storeToRefs(gameStateStore);
-   const { gameMode, boardSize } = storeToRefs(gameSettingsStore);
+   const { gameMode, boardSize, humanPlayer } = storeToRefs(gameSettingsStore);
    const { addMove, setGameStatus } = gameStateStore;
 
 
@@ -17,8 +17,8 @@ export function useGameFlow() {
       if (gameMode.value === 2) return false;  // PvP: no AI
       if (gameMode.value === 0) return true;   // AI vs AI: always AI
       if (gameMode.value === 1) {
-         // PvE: Red (1) is always human, Yellow (2) is always AI
-         return currentPlayer.value === 2;
+         // PvE: currentPlayer is AI if it is NOT the human player
+         return currentPlayer.value !== humanPlayer.value;
       }
       return false;
    }

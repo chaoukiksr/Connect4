@@ -1,12 +1,19 @@
 // src/composables/useMinimax.js
+// Minimax with alpha-beta pruning, transposition table, and forced-win compression.
 
 export function useMinimax() {
 
   const MAX_PLAYER = 2; // IA
   const MIN_PLAYER = 1; // Humain
   const EMPTY = 0;
+  // Scores >= WIN_SCORE are considered a forced win for MAX_PLAYER
+  const WIN_SCORE = 9000;
 
   const copyBoard = (board) => board.map(row => [...row]);
+
+  /** Compact string key for the transposition table. */
+  const boardKey = (board, depth, isMax) =>
+    board.map(r => r.join('')).join('|') + `|${depth}|${isMax ? 1 : 0}`;
 
   const checkWinForMinimax = (board, player) => {
     const rows = board.length;
@@ -153,41 +160,53 @@ export function useMinimax() {
            getAvailableCol(board).length === 0;
   };
 
-  const minimax = (board, depth, isMaximizing, alpha = -Infinity, beta = Infinity) => {
-    // Check for terminal states
-    if (checkWinForMinimax(board, MAX_PLAYER)) return 10000 + depth; // Prefer faster wins
-    if (checkWinForMinimax(board, MIN_PLAYER)) return -10000 - depth; // Delay losses
-    if (getAvailableCol(board).length === 0) return 0; // Draw
+  /**
+   * Minimax with alpha-beta + transposition table.
+   * @param {Map} tt - transposition table (created fresh per root call)
+   */
+  const minimax = (board, depth, isMaximizing, alpha = -Infinity, beta = Infinity, tt = new Map()) => {
+    const key = boardKey(board, depth, isMaximizing);
+    if (tt.has(key)) return tt.get(key);
 
-    // Use heuristic evaluation at depth 0
-    if (depth === 0) return evaluateBoard(board);
+    // Terminal checks
+    if (checkWinForMinimax(board, MAX_PLAYER)) { const s = 10000 + depth; tt.set(key, s); return s; }
+    if (checkWinForMinimax(board, MIN_PLAYER)) { const s = -10000 - depth; tt.set(key, s); return s; }
+    const avail = getAvailableCol(board);
+    if (avail.length === 0)                     { tt.set(key, 0); return 0; }
+    if (depth === 0) { const s = evaluateBoard(board); tt.set(key, s); return s; }
 
     if (isMaximizing) {
-      let bestScore = -Infinity;
-      for (let col of getAvailableCol(board)) {
-        const newBoard = copyBoard(board);
-        makeMove(newBoard, col, MAX_PLAYER);
-        const score = minimax(newBoard, depth - 1, false, alpha, beta);
-        bestScore = Math.max(score, bestScore);
-        alpha = Math.max(alpha, score);
-        if (beta <= alpha) break; // Alpha-beta pruning
+      let best = -Infinity;
+      for (const col of avail) {
+        const nb = copyBoard(board);
+        makeMove(nb, col, MAX_PLAYER);
+        const s = minimax(nb, depth - 1, false, alpha, beta, tt);
+        best = Math.max(best, s);
+        alpha = Math.max(alpha, s);
+        // ── Forced-win compression: guaranteed win found, stop immediately ──
+        if (best >= WIN_SCORE) break;
+        if (beta <= alpha) break;
       }
-      return bestScore;
+      tt.set(key, best);
+      return best;
     } else {
-      let bestScore = Infinity;
-      for (let col of getAvailableCol(board)) {
-        const newBoard = copyBoard(board);
-        makeMove(newBoard, col, MIN_PLAYER);
-        const score = minimax(newBoard, depth - 1, true, alpha, beta);
-        bestScore = Math.min(score, bestScore);
-        beta = Math.min(beta, score);
-        if (beta <= alpha) break; // Alpha-beta pruning
+      let best = Infinity;
+      for (const col of avail) {
+        const nb = copyBoard(board);
+        makeMove(nb, col, MIN_PLAYER);
+        const s = minimax(nb, depth - 1, true, alpha, beta, tt);
+        best = Math.min(best, s);
+        beta = Math.min(beta, s);
+        if (best <= -WIN_SCORE) break;
+        if (beta <= alpha) break;
       }
-      return bestScore;
+      tt.set(key, best);
+      return best;
     }
   };
 
   const getBestMove = (board, depth = 4, onProgress = null) => {
+    const tt = new Map();
     let bestScore = -Infinity;
     let move = null;
     let alpha = -Infinity;
@@ -198,23 +217,20 @@ export function useMinimax() {
     availableCols.forEach((col, index) => {
       const newBoard = copyBoard(board);
       makeMove(newBoard, col, MAX_PLAYER);
-      const score = minimax(newBoard, depth - 1, false, alpha, beta);
-      if (score > bestScore) {
-        bestScore = score;
-        move = col;
-      }
+      const score = minimax(newBoard, depth - 1, false, alpha, beta, tt);
+      if (score > bestScore) { bestScore = score; move = col; }
       alpha = Math.max(alpha, score);
-      // Report progress
-      if (onProgress) {
-        const progress = Math.round(((index + 1) / totalCols) * 100);
-        onProgress(progress);
-      }
+      if (onProgress) onProgress(Math.round(((index + 1) / totalCols) * 100));
+      // Early exit on forced win
+      if (bestScore >= WIN_SCORE) return;
     });
+    console.log(`[Minimax] best=${bestScore} col=${move} tt=${tt.size}`);
     return move;
   };
 
   // Async version for smooth UI progress updates
   const getBestMoveAsync = async (board, depth = 4, onProgress = null) => {
+    const tt = new Map();
     let bestScore = -Infinity;
     let move = null;
     let alpha = -Infinity;
@@ -226,65 +242,88 @@ export function useMinimax() {
       const col = availableCols[index];
       const newBoard = copyBoard(board);
       makeMove(newBoard, col, MAX_PLAYER);
-      const score = minimax(newBoard, depth - 1, false, alpha, beta);
-      if (score > bestScore) {
-        bestScore = score;
-        move = col;
-      }
+      const score = minimax(newBoard, depth - 1, false, alpha, beta, tt);
+      if (score > bestScore) { bestScore = score; move = col; }
       alpha = Math.max(alpha, score);
-      // Report progress and yield to UI thread
       if (onProgress) {
-        const progress = Math.round(((index + 1) / totalCols) * 100);
-        onProgress(progress);
-        // Small delay to allow UI to render the progress update
+        onProgress(Math.round(((index + 1) / totalCols) * 100));
         await new Promise(resolve => setTimeout(resolve, 10));
       }
+      // Early exit: forced win found
+      if (bestScore >= WIN_SCORE) {
+        if (onProgress) onProgress(100);
+        break;
+      }
     }
+    console.log(`[Minimax async] best=${bestScore} col=${move} tt=${tt.size}`);
     return move;
+  };
+
+  /**
+   * Single-pass analysis: returns { bestCol, scores[], bestScore }.
+   * More efficient than calling getColumnScores + getBestMove separately.
+   * Used by "IA jouerait" suggestion button.
+   */
+  const analyseAsync = async (board, depth = 4, onProgress = null) => {
+    const tt = new Map();
+    const cols = board[0].length;
+    const scores = Array(cols).fill(null);
+    let bestScore = -Infinity;
+    let bestCol = null;
+    let alpha = -Infinity;
+    const avail = getAvailableCol(board);
+
+    for (let i = 0; i < avail.length; i++) {
+      const col = avail[i];
+      const nb = copyBoard(board);
+      makeMove(nb, col, MAX_PLAYER);
+      const s = minimax(nb, depth - 1, false, alpha, Infinity, tt);
+      scores[col] = s;
+      if (s > bestScore) { bestScore = s; bestCol = col; }
+      alpha = Math.max(alpha, s);
+      if (onProgress) {
+        onProgress(Math.round(((i + 1) / avail.length) * 100));
+        await new Promise(r => setTimeout(r, 0));
+      }
+      if (bestScore >= WIN_SCORE) {
+        if (onProgress) onProgress(100);
+        break;
+      }
+    }
+    return { bestCol, scores, bestScore };
   };
 
   // Returns an array of scores for each column (null if column is full)
   // Uses a capped depth for display to avoid UI freezes
   const getColumnScores = (board, depth = 4) => {
-    // Cap display depth to prevent UI freezes
     const displayDepth = Math.min(depth, 4);
+    const tt = new Map();
     const cols = board[0].length;
     const scores = [];
     for (let col = 0; col < cols; col++) {
-      if (board[0][col] !== 0) {
-        scores.push(null); // Column is full
-      } else {
-        const newBoard = copyBoard(board);
-        makeMove(newBoard, col, MAX_PLAYER);
-        const score = minimax(newBoard, displayDepth - 1, false, -Infinity, Infinity);
-        scores.push(score);
-      }
+      if (board[0][col] !== 0) { scores.push(null); continue; }
+      const newBoard = copyBoard(board);
+      makeMove(newBoard, col, MAX_PLAYER);
+      scores.push(minimax(newBoard, displayDepth - 1, false, -Infinity, Infinity, tt));
     }
     return scores;
   };
 
   // Async version of getColumnScores for use in watchers
   const getColumnScoresAsync = async (board, depth = 4) => {
-    // Cap display depth to prevent UI freezes
     const displayDepth = Math.min(depth, 4);
+    const tt = new Map();
     const cols = board[0].length;
     const scores = [];
     for (let col = 0; col < cols; col++) {
-      if (board[0][col] !== 0) {
-        scores.push(null); // Column is full
-      } else {
-        const newBoard = copyBoard(board);
-        makeMove(newBoard, col, MAX_PLAYER);
-        const score = minimax(newBoard, displayDepth - 1, false, -Infinity, Infinity);
-        scores.push(score);
-      }
-      // Yield to UI thread periodically
-      if (col % 2 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
+      if (board[0][col] !== 0) { scores.push(null); continue; }
+      const newBoard = copyBoard(board);
+      makeMove(newBoard, col, MAX_PLAYER);
+      scores.push(minimax(newBoard, displayDepth - 1, false, -Infinity, Infinity, tt));
+      if (col % 2 === 0) await new Promise(resolve => setTimeout(resolve, 0));
     }
     return scores;
   };
 
-  return { getBestMove, getBestMoveAsync, getColumnScores, getColumnScoresAsync };
+  return { getBestMove, getBestMoveAsync, getColumnScores, getColumnScoresAsync, analyseAsync };
 }

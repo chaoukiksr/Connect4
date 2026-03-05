@@ -1,31 +1,44 @@
 <template>
    <Navbar />
-   <main class="min-h-screen bg-slate-900 px-3 py-4 md:px-6 md:py-6">
+
+   <!-- ── Status Banner (persistent, 1 line) ─────────────────────── -->
+   <div v-if="lastMoveBanner"
+      class="sticky top-0 z-30 text-center text-xs font-semibold py-1.5 px-4 border-b border-slate-700 transition-colors duration-300"
+      :class="currentPlayer === 1 ? 'bg-red-950/80 text-red-300' : 'bg-yellow-950/80 text-yellow-300'">
+      {{ lastMoveBanner }}
+   </div>
+
+   <main class="bg-slate-900 px-2 py-3 md:px-6 md:py-5"
+         :style="{ minHeight: 'calc(100vh - 48px)' }">
 
       <!-- ── Player Turn Panels ─────────────────────────────────────── -->
-      <div class="max-w-6xl mx-auto mb-4 grid grid-cols-2 gap-3">
+      <div class="max-w-6xl mx-auto mb-3 grid grid-cols-2 gap-2">
          <!-- Rouge -->
-         <div class="rounded-xl p-3 border-2 flex items-center gap-3 transition-all duration-300"
+         <div class="rounded-xl p-2.5 border-2 flex items-center gap-2.5 transition-all duration-300"
             :class="currentPlayer === 1 && gameStatus === 'playing'
                ? 'border-red-500 bg-red-950/40 shadow-lg shadow-red-500/20'
                : 'border-slate-700 bg-slate-800/60'">
-            <div class="w-7 h-7 rounded-full bg-linear-to-br from-red-400 to-red-600 shrink-0"></div>
-            <div>
-               <p class="font-bold text-white text-sm">Joueur Rouge</p>
-               <p class="text-xs" :class="currentPlayer === 1 && gameStatus === 'playing' ? 'text-red-400' : 'text-slate-500'">
+            <div class="w-6 h-6 rounded-full bg-linear-to-br from-red-400 to-red-600 shrink-0"></div>
+            <div class="min-w-0">
+               <p class="font-bold text-white text-xs truncate">
+                  {{ gameMode === 1 && humanPlayer === 1 ? '🧑 Vous' : gameMode === 1 ? '🤖 IA' : 'Joueur' }} — Rouge
+               </p>
+               <p class="text-[10px]" :class="currentPlayer === 1 && gameStatus === 'playing' ? 'text-red-400' : 'text-slate-500'">
                   {{ currentPlayer === 1 && gameStatus === 'playing' ? '▶ À jouer…' : 'En attente' }}
                </p>
             </div>
          </div>
          <!-- Jaune -->
-         <div class="rounded-xl p-3 border-2 flex items-center gap-3 transition-all duration-300"
+         <div class="rounded-xl p-2.5 border-2 flex items-center gap-2.5 transition-all duration-300"
             :class="currentPlayer === 2 && gameStatus === 'playing'
                ? 'border-yellow-400 bg-yellow-950/40 shadow-lg shadow-yellow-400/20'
                : 'border-slate-700 bg-slate-800/60'">
-            <div class="w-7 h-7 rounded-full bg-linear-to-br from-yellow-300 to-amber-500 shrink-0"></div>
-            <div>
-               <p class="font-bold text-white text-sm">Joueur Jaune</p>
-               <p class="text-xs" :class="currentPlayer === 2 && gameStatus === 'playing' ? 'text-yellow-400' : 'text-slate-500'">
+            <div class="w-6 h-6 rounded-full bg-linear-to-br from-yellow-300 to-amber-500 shrink-0"></div>
+            <div class="min-w-0">
+               <p class="font-bold text-white text-xs truncate">
+                  {{ gameMode === 1 && humanPlayer === 2 ? '🧑 Vous' : gameMode === 1 ? '🤖 IA' : 'Joueur' }} — Jaune
+               </p>
+               <p class="text-[10px]" :class="currentPlayer === 2 && gameStatus === 'playing' ? 'text-yellow-400' : 'text-slate-500'">
                   {{ currentPlayer === 2 && gameStatus === 'playing' ? '▶ À jouer…' : 'En attente' }}
                </p>
             </div>
@@ -44,8 +57,31 @@
       <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_270px] gap-5">
 
          <!-- ░░ BOARD ░░ -->
-         <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-5">
-            <Board :board="board" :boardSize="boardSize" />
+         <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-3 md:p-5">
+            <!-- Paint mode toolbar -->
+            <div v-if="paintMode" class="flex gap-2 mb-3 items-center">
+               <span class="text-xs text-yellow-400 font-bold uppercase tracking-wider">✏ Mode peinture</span>
+               <div class="flex gap-1 ml-auto">
+                  <button v-for="b in [{ label: '🔴', val: 1 }, { label: '🟡', val: 2 }, { label: '⬛', val: 0 }]" :key="b.val"
+                     @click="paintBrush = b.val"
+                     class="px-2 py-1 rounded text-xs font-bold border transition-all"
+                     :class="paintBrush === b.val ? 'bg-slate-500 border-white' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'">
+                     {{ b.label }}
+                  </button>
+               </div>
+            </div>
+            <Board
+               :board="board"
+               :boardSize="boardSize"
+               :suggestedCol="suggestedCol"
+               :paintMode="paintMode"
+               @paint-cell="onPaintCell"
+            />
+            <!-- AI suggestion result -->
+            <div v-if="suggestedCol !== null && !paintMode" class="mt-2 text-center text-xs font-bold text-emerald-400 animate-pulse">
+               IA jouerait ▶ Colonne {{ suggestedCol + 1 }}
+               <button @click="suggestedCol = null" class="ml-2 text-slate-500 hover:text-white">×</button>
+            </div>
          </div>
 
          <!-- ░░ SIDEBAR ░░ -->
@@ -75,6 +111,35 @@
                   class="w-full text-left px-3 py-2 rounded-lg font-bold text-sm transition-all hover:bg-slate-700"
                   :class="gameStatus === 'playing' ? 'text-yellow-400' : 'text-emerald-400'">
                   {{ gameStatus === 'start' ? '▶ Démarrer' : gameStatus === 'playing' ? '⏸ Pause' : '▶ Reprendre' }}
+               </button>
+
+               <div class="border-t border-slate-700/50"></div>
+
+               <!-- IA suggestion -->
+               <button v-if="gameStatus === 'playing' && aiMode === 'minimax'"
+                  @click="computeSuggestion"
+                  :disabled="isSuggesting"
+                  class="w-full text-left px-3 py-2 rounded-lg font-bold text-sm transition-all hover:bg-slate-700 disabled:opacity-40 text-emerald-300">
+                  {{ isSuggesting ? '⏳ Analyse…' : '🤖 IA jouerait' }}
+               </button>
+
+               <div class="border-t border-slate-700/50"></div>
+
+               <!-- Mode switch -->
+               <button v-if="gameStatus === 'playing' || gameStatus === 'paused'"
+                  @click="switchMode"
+                  class="w-full text-left px-3 py-2 rounded-lg font-bold text-sm transition-all hover:bg-slate-700 text-sky-400">
+                  🔄 Mode : {{ gameMode === 1 ? 'PvE → PvP' : gameMode === 2 ? 'PvP → PvE' : 'IA vs IA' }}
+               </button>
+
+               <div class="border-t border-slate-700/50"></div>
+
+               <!-- Paint mode toggle -->
+               <button
+                  @click="togglePaintMode"
+                  class="w-full text-left px-3 py-2 rounded-lg font-bold text-sm transition-all hover:bg-slate-700"
+                  :class="paintMode ? 'text-yellow-300' : 'text-slate-400'">
+                  {{ paintMode ? '✏ Quitter peinture' : '🖌 Mode peinture' }}
                </button>
 
                <div class="border-t border-slate-700/50"></div>
@@ -194,7 +259,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 
@@ -208,6 +273,7 @@ import { useGame } from '../composables/useGame';
 import { useFileManagement } from '../composables/useFileManagement';
 import { useApi } from '../composables/useApi';
 import { useReplay } from '../composables/useReplay';
+import { useMinimax } from '../composables/useMinimax';
 
 const router = useRouter();
 
@@ -215,28 +281,92 @@ const router = useRouter();
 const gameSettingsStore = useGameSettingsStore();
 const gameStateStore = useGameStateStore();
 
-const { aiDepth, aiMode, boardSize, gameMode, startingPlayer } = storeToRefs(gameSettingsStore);
-const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex, aiThinkingProgress, gameLogs } = storeToRefs(gameStateStore);
-const { resetGame, addLog } = gameStateStore;
+const { aiDepth, aiMode, boardSize, gameMode, startingPlayer, humanPlayer } = storeToRefs(gameSettingsStore);
+const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex, aiThinkingProgress, gameLogs, winningCells } = storeToRefs(gameStateStore);
+const { resetGame, addLog, setWinner, setWinningCells } = gameStateStore;
 
 // ── Composables ──────────────────────────────────────────────────────
 const { startGame } = useGame();
 const { download, save } = useFileManagement();
 const { savedGameToDatabase } = useApi();
 const { isReplaying, replaySpeed, startAutoReplay, stopAutoReplay, stepForward, stepBackward, goToStart, goToEnd } = useReplay();
+const { analyseAsync } = useMinimax();
 
 // ── Local state ──────────────────────────────────────────────────────
 const showQuitModal = ref(false);
+const suggestedCol   = ref(null);   // null | 0-indexed column
+const isSuggesting   = ref(false);
+const paintMode      = ref(false);
+const paintBrush     = ref(1);      // 1=Red, 2=Yellow, 0=Erase
 
-// ── Watchers for journal ─────────────────────────────────────────────
+// ── Status banner ────────────────────────────────────────────────────
+const lastMoveBanner = computed(() => {
+   const total = moveHistory.value.length;
+   if (total === 0 || gameStatus.value === 'start') return null;
+   const idx = Math.max(0, historyIndex.value);
+   const last = moveHistory.value[idx];
+   if (!last) return null;
+   const who = last.player === 1 ? '🔴 Rouge' : '🟡 Jaune';
+   if (winner.value) return `${who} a gagné !`;
+   const next = last.player === 1 ? '🟡 Jaune' : '🔴 Rouge';
+   return `Dernier coup ${who} — Col ${last.col + 1} — À ${next} de jouer`;
+});
+
+// ── Watchers ─────────────────────────────────────────────────────────
 watch(gameStatus, (val) => {
    if (val === 'playing') addLog('Partie démarrée.');
    if (val === 'paused')  addLog('Partie mise en pause.');
+   if (val !== 'playing') { suggestedCol.value = null; isSuggesting.value = false; }
 });
 
 watch(winner, (val) => {
    if (val) addLog(`🏆 ${val === 1 ? 'Rouge' : 'Jaune'} a gagné la partie !`);
 });
+
+// ── AI Suggestion ("IA jouerait") ────────────────────────────────────
+const computeSuggestion = async () => {
+   if (isSuggesting.value) return;
+   isSuggesting.value = true;
+   suggestedCol.value = null;
+   try {
+      const { bestCol } = await analyseAsync(board.value, aiDepth.value);
+      suggestedCol.value = bestCol;
+      if (bestCol !== null) addLog(`🤖 Suggestion IA : Colonne ${bestCol + 1}`);
+   } finally {
+      isSuggesting.value = false;
+   }
+};
+
+// ── Mode switch mid-game (no reset) ──────────────────────────────────
+const switchMode = () => {
+   if (gameMode.value === 1) {
+      gameMode.value = 2;
+      addLog('🔄 Mode basculé vers Joueur vs Joueur.');
+   } else if (gameMode.value === 2) {
+      gameMode.value = 1;
+      addLog('🔄 Mode basculé vers Joueur vs IA.');
+   }
+};
+
+// ── Paint mode ───────────────────────────────────────────────────────
+const togglePaintMode = () => {
+   paintMode.value = !paintMode.value;
+   if (paintMode.value) {
+      if (typeof setWinner === 'function') setWinner(null);
+      else winner.value = null;
+      if (typeof setWinningCells === 'function') setWinningCells([]);
+      else winningCells.value = [];
+      suggestedCol.value = null;
+      addLog('✏ Paint mode activé.');
+   } else {
+      addLog('✏ Paint mode désactivé.');
+   }
+};
+
+const onPaintCell = ({ row, col }) => {
+   if (!paintMode.value) return;
+   board.value[row][col] = paintBrush.value;
+};
 
 // ── Actions ──────────────────────────────────────────────────────────
 
@@ -254,6 +384,8 @@ const toggleGameStatus = () => {
 
 const restartGame = () => {
    stopAutoReplay();
+   paintMode.value = false;
+   suggestedCol.value = null;
    resetGame();
 };
 

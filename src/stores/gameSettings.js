@@ -5,15 +5,17 @@ export const useGameSettingsStore = defineStore('gameSettings',()=>{
       const gameMode = ref('random') // 'random' or 'BGA'
       const startingPlayer= ref('red')
       const boardSize = ref({rows:6, cols:7})
-     
       const aiMode = ref('minimax') 
       const aiDepth = ref(5)
+      // 1 = human plays as Red, 2 = human plays as Yellow
+      const humanPlayer = ref(1)
 
    const setGameMode = (mode) => gameMode.value = mode
    const setStartingPlayer = (player) => startingPlayer.value = player
    const setBoardSize = (size) => boardSize.value = size
    const setAiMode = (mode) => aiMode.value = mode
    const setAiDepth = (depth) => aiDepth.value = depth
+   const setHumanPlayer = (p) => humanPlayer.value = p
   
    const setSettings = (settings) => {
       if (settings.gameMode !== undefined) gameMode.value = settings.gameMode
@@ -21,6 +23,7 @@ export const useGameSettingsStore = defineStore('gameSettings',()=>{
       if (settings.boardSize) boardSize.value = settings.boardSize
       if (settings.aiMode) aiMode.value = settings.aiMode
       if (settings.aiDepth !== undefined) aiDepth.value = settings.aiDepth
+      if (settings.humanPlayer !== undefined) humanPlayer.value = settings.humanPlayer
       console.log('settings are set in the store')
       console.log('settings recieved from the user: ',settings);
       
@@ -34,11 +37,13 @@ export const useGameSettingsStore = defineStore('gameSettings',()=>{
          aiDepth,
          aiMode,
          boardSize,
+         humanPlayer,
          setGameMode,
          setStartingPlayer,
          setBoardSize,
          setAiMode,
          setAiDepth,
+         setHumanPlayer,
          setSettings
       }
 })
