@@ -22,7 +22,7 @@ export function useApi(){
       return data.games || [];
    }
 
-   const savedGameToDatabase = async () => {
+   const savedGameToDatabase = async (extra = {}) => {
       const moveSequence = getMoveSequenceFromMoveHistory();
       
       // Ensure status is a valid string
@@ -34,8 +34,6 @@ export function useApi(){
          ligneGagnante = JSON.stringify(winningCells.value);
       }
       
-      console.log('from useApi: ',moveSequence ,' ',gameMode.value, ' ',status,' ', winner.value,' ',ligneGagnante);
-      
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/games`, {
          method: 'POST',
@@ -45,32 +43,56 @@ export function useApi(){
          },
          body: JSON.stringify({
             signature: moveSequence,
-            mode: "BGA",
-            type_partie: gameMode.value || 'random',
-            status: status,
-            startingPlayer: startingPlayer.value,
-            winner: winner.value,
-            ligne_gagnante: ligneGagnante
+            mode: extra.mode ?? 'normal',
+            type_partie: extra.type_partie ?? (gameMode.value || 'random'),
+            status: extra.status ?? status,
+            startingPlayer: extra.startingPlayer ?? startingPlayer.value,
+            winner: extra.winner ?? winner.value,
+            ligne_gagnante: extra.ligne_gagnante ?? ligneGagnante,
+            bga_table_id: extra.bga_table_id ?? null,
+            board_size: extra.board_size ?? null,
          })
       });
       
       const data = await response.json();
       return { ok: response.ok, data };
-   }
-   // moveSequence,
-   // mode,
-   //    type_partie,
-   //    status,
-   //    startingPlayerInt,
-   //    winning_player,
-   //    winning_line,
-   //    importedFrom
+   };
+
+   const fetchStats = async () => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/games/stats`, {
+         headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error(`Stats fetch failed: ${response.status}`);
+      return response.json();
+   };
+
+   const fetchProbability = async (board, currentPlayer = 1, depth = 4) => {
+      const response = await fetch(`${API_URL}/probability`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ board, currentPlayer, depth })
+      });
+      if (!response.ok) throw new Error(`Probability fetch failed: ${response.status}`);
+      return response.json();
+   };
+
+   const deleteGame = async (id) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/games/${id}`, {
+         method: 'DELETE',
+         headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const data = await response.json();
+      return { ok: response.ok, data };
+   };
+
    // Fetch all situations for a given game (by id_partie)
    const fetchSituationsByGame = async (id_partie) => {
       const response = await fetch(`${API_URL}/games/${id_partie}/situations`);
       const data = await response.json();
       return data.situations || [];
-   }
+   };
 
-   return { fetchGames, savedGameToDatabase, fetchSituationsByGame };
+   return { fetchGames, savedGameToDatabase, fetchSituationsByGame, fetchStats, fetchProbability, deleteGame };
 }

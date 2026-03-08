@@ -394,7 +394,7 @@ const downloadGame = () => download();
 const saveGame = async () => {
    save();
    const { ok, data } = await savedGameToDatabase();
-   if (ok) { addLog('Partie sauvegardée en base.'); }
+   if (ok) { addLog('Partie sauvegardée en base de données.'); }
    else    { addLog(`Erreur sauvegarde : ${data.error}`); }
 };
 

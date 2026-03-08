@@ -39,6 +39,7 @@ export function useBga() {
   const bgaStatus = ref('idle'); // 'idle' | 'loading' | 'success' | 'error'
   const bgaError = ref('');
   const bgaTableId = ref('');
+  const bgaRawData = ref(null); // full response from scraper, used for DB save
 
   const loadFromSignature = (signature, startingPlayer = 1) => {
     const rows = boardSize.value.rows;
@@ -79,6 +80,7 @@ export function useBga() {
       const startPlayer = data.starting_player === '2' ? 2 : 1;
       gameState.loadReplay(moves, startPlayer);
 
+      bgaRawData.value = data; // store for DB save
       bgaStatus.value = 'success';
     } catch (err) {
       bgaError.value = err.message;
@@ -90,7 +92,8 @@ export function useBga() {
     bgaStatus.value = 'idle';
     bgaError.value = '';
     bgaTableId.value = '';
+    bgaRawData.value = null;
   };
 
-  return { bgaStatus, bgaError, bgaTableId, loadBgaGame, loadFromSignature, resetBga };
+  return { bgaStatus, bgaError, bgaTableId, bgaRawData, loadBgaGame, loadFromSignature, resetBga };
 }

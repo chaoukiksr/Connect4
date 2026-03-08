@@ -140,6 +140,66 @@
          <!-- ░░ SIDEBAR ░░ -->
          <div class="space-y-3">
 
+            <!-- ── Save to DB ───────────────────────────────────────── -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-4">
+               <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Sauvegarde</p>
+               <button @click="saveCurrentGame"
+                  :disabled="isSavingToDb || !!selectedDbGame"
+                  class="w-full py-2 rounded-lg font-bold text-sm transition-all disabled:opacity-40"
+                  :class="saveMsg === 'ok' ? 'bg-emerald-700 text-white' : 'bg-sky-700 hover:bg-sky-600 text-white'">
+                  {{ isSavingToDb ? '⏳ Sauvegarde…' : saveMsg === 'ok' ? '✓ Sauvegardé' : '💾 Sauvegarder en base' }}
+               </button>
+               <p v-if="saveMsgText" class="mt-2 text-xs"
+                  :class="saveMsg === 'ok' ? 'text-emerald-400' : saveMsg === 'dup' ? 'text-yellow-400' : 'text-red-400'">
+                  {{ saveMsgText }}
+               </p>
+               <p v-if="selectedDbGame" class="mt-2 text-xs text-slate-500">
+                  Partie issue de la base — pas de doublon possible.
+               </p>
+            </div>
+
+            <!-- ── Probability analysis ────────────────────────────── -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-4">
+               <div class="flex items-center justify-between mb-3">
+                  <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Probabilités</p>
+                  <button @click="analysePosition" :disabled="prob.loading"
+                     class="px-2 py-1 rounded text-xs font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 disabled:opacity-40 transition-all">
+                     {{ prob.loading ? '⏳' : '🎯 Analyser' }}
+                  </button>
+               </div>
+               <div v-if="prob.red !== null" class="space-y-2">
+                  <!-- Red -->
+                  <div>
+                     <div class="flex justify-between text-xs mb-1">
+                        <span class="text-red-400 font-bold">🔴 Rouge</span>
+                        <span class="text-red-400 font-bold">{{ prob.red }}%</span>
+                     </div>
+                     <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-red-500 rounded-full transition-all duration-300"
+                           :style="{ width: `${prob.red}%` }"></div>
+                     </div>
+                  </div>
+                  <!-- Yellow -->
+                  <div>
+                     <div class="flex justify-between text-xs mb-1">
+                        <span class="text-yellow-400 font-bold">🟡 Jaune</span>
+                        <span class="text-yellow-400 font-bold">{{ prob.yellow }}%</span>
+                     </div>
+                     <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-yellow-400 rounded-full transition-all duration-300"
+                           :style="{ width: `${prob.yellow}%` }"></div>
+                     </div>
+                  </div>
+                  <p v-if="prob.bestCol !== null" class="text-xs text-emerald-400 font-medium pt-1">
+                     Meilleur coup : Colonne {{ prob.bestCol + 1 }}
+                  </p>
+               </div>
+               <div v-else-if="!prob.loading" class="text-xs text-slate-600">
+                  Cliquez sur Analyser pour calculer les probabilités.
+               </div>
+               <p v-if="prob.error" class="mt-2 text-xs text-red-400">⚠ {{ prob.error }}</p>
+            </div>
+
             <!-- ── Replay controls ──────────────────────────────────── -->
             <div class="bg-slate-800 rounded-xl border border-slate-700 p-4">
                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Relecture</p>
@@ -219,7 +279,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 
@@ -241,8 +301,8 @@ const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex, gam
 const { boardSize } = storeToRefs(gameSettingsStore);
 
 const { isReplaying, replaySpeed, startAutoReplay, stopAutoReplay, stepForward, stepBackward, goToStart, goToEnd } = useReplay();
-const { bgaStatus, bgaError, bgaTableId, loadBgaGame, loadFromSignature, resetBga } = useBga();
-const { fetchGames } = useApi();
+const { bgaStatus, bgaError, bgaTableId, bgaRawData, loadBgaGame, loadFromSignature, resetBga } = useBga();
+const { fetchGames, savedGameToDatabase, fetchProbability } = useApi();
 
 const handleLoad = () => {
    stopAutoReplay();
@@ -275,4 +335,69 @@ const loadDbGame = (game) => {
    const startPlayer = game.joueur_depart === 'Y' ? 2 : 1;
    loadFromSignature(game.signature, startPlayer);
 };
+
+// ── Save to DB ──────────────────────────────────────────────────────────
+const isSavingToDb = ref(false);
+const saveMsg = ref('');       // '' | 'ok' | 'dup' | 'err'
+const saveMsgText = ref('');
+
+const saveCurrentGame = async () => {
+   if (isSavingToDb.value) return;
+   isSavingToDb.value = true;
+   saveMsg.value = '';
+   try {
+      // Build extra metadata from raw BGA scrape or selected DB game
+      const extra = {};
+      if (bgaRawData.value) {
+         extra.bga_table_id = String(bgaTableId.value);
+         extra.board_size   = bgaRawData.value.board_size
+            ? bgaRawData.value.board_size.replace(/\D+/g, 'x').replace(/x+/g, 'x').slice(0, 10)
+            : `${boardSize.value.cols}x${boardSize.value.rows}`;
+         extra.mode         = 'BGA';
+         extra.type_partie  = 'scraped';
+         extra.status       = bgaRawData.value.status || 'finished';
+         extra.startingPlayer = bgaRawData.value.starting_player || 'red';
+         extra.winner       = bgaRawData.value.winning_player === '2' ? 2
+            : bgaRawData.value.winning_player === '1' ? 1 : null;
+      } else if (selectedDbGame.value) {
+         saveMsgText.value = 'Déjà en base de données.';
+         saveMsg.value = 'dup';
+         return;
+      }
+      const { ok, data } = await savedGameToDatabase(extra);
+      if (ok) {
+         saveMsg.value = 'ok';
+         saveMsgText.value = `Partie enregistrée (#${data.game?.id_partie ?? '?'}).`;
+      } else if (data?.error?.toLowerCase?.().includes('already')) {
+         saveMsg.value = 'dup';
+         saveMsgText.value = 'Déjà en base de données.';
+      } else {
+         saveMsg.value = 'err';
+         saveMsgText.value = data?.error || 'Erreur lors de la sauvegarde.';
+      }
+   } catch (err) {
+      saveMsg.value = 'err';
+      saveMsgText.value = err.message;
+   } finally {
+      isSavingToDb.value = false;
+   }
+};
+
+// ── Probability ──────────────────────────────────────────────────────────
+const prob = ref({ red: null, yellow: null, bestCol: null, loading: false, error: '' });
+
+const analysePosition = async () => {
+   if (prob.value.loading || gameStatus.value !== 'replay') return;
+   prob.value = { ...prob.value, loading: true, error: '' };
+   try {
+      const cp = currentPlayer.value;
+      const result = await fetchProbability(board.value, cp, 4);
+      prob.value = { red: result.red, yellow: result.yellow, bestCol: result.bestCol, loading: false, error: '' };
+   } catch (err) {
+      prob.value = { ...prob.value, loading: false, error: err.message };
+   }
+};
+
+// Reset proba when step changes
+watch(historyIndex, () => { prob.value = { red: null, yellow: null, bestCol: null, loading: false, error: '' }; });
 </script>
