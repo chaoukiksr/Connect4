@@ -27,6 +27,13 @@
                <input type="file" accept=".json" @change="(e) => upload(e, () => router.push('/game'))" class="hidden" />
             </label>
 
+            <!-- Play Online (Multiplayer) Button -->
+            <button
+               @click="router.push('/multiplayer')"
+               class="w-full bg-linear-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white font-bold text-xl py-4 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-violet-500/30">
+               🌐 Jouer en ligne
+            </button>
+
             <!-- BGA Button -->
             <button
                @click="router.push('/bga')"
