@@ -25,10 +25,7 @@
           readonly
           class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-emerald-400 font-mono focus:outline-none"
         />
-        <button
-          @click="copyLink"
-          class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-sm font-bold transition-all"
-        >
+        <button @click="copyLink" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-sm font-bold transition-all">
           {{ copied ? '✓' : '📋' }}
         </button>
       </div>
@@ -49,37 +46,27 @@
 
       <!-- Player panels -->
       <div class="max-w-6xl mx-auto mb-3 grid grid-cols-2 gap-2">
-
-        <!-- Player 1 (Red) -->
         <div class="rounded-xl p-2.5 border-2 flex items-center gap-2.5 transition-all duration-300"
           :class="currentPlayer === 1 && gameStatus === 'playing'
             ? 'border-red-500 bg-red-950/40 shadow-lg shadow-red-500/20'
             : 'border-slate-700 bg-slate-800/60'">
           <div class="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-red-600 shrink-0 ring-2"
-               :class="myPlayerNumber === 1 ? 'ring-white/40' : 'ring-transparent'">
-          </div>
+               :class="myPlayerNumber === 1 ? 'ring-white/40' : 'ring-transparent'" />
           <div class="min-w-0">
-            <p class="font-bold text-white text-xs truncate">
-              {{ myPlayerNumber === 1 ? '🧑 You' : '👤 Opponent' }} — Red
-            </p>
+            <p class="font-bold text-white text-xs truncate">{{ myPlayerNumber === 1 ? '🧑 You' : '👤 Opponent' }} — Red</p>
             <p class="text-[10px]" :class="currentPlayer === 1 && gameStatus === 'playing' ? 'text-red-400' : 'text-slate-500'">
               {{ currentPlayer === 1 && gameStatus === 'playing' ? '▶ Playing…' : 'Waiting' }}
             </p>
           </div>
         </div>
-
-        <!-- Player 2 (Yellow) -->
         <div class="rounded-xl p-2.5 border-2 flex items-center gap-2.5 transition-all duration-300"
           :class="currentPlayer === 2 && gameStatus === 'playing'
             ? 'border-yellow-400 bg-yellow-950/40 shadow-lg shadow-yellow-400/20'
             : 'border-slate-700 bg-slate-800/60'">
           <div class="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 shrink-0 ring-2"
-               :class="myPlayerNumber === 2 ? 'ring-white/40' : 'ring-transparent'">
-          </div>
+               :class="myPlayerNumber === 2 ? 'ring-white/40' : 'ring-transparent'" />
           <div class="min-w-0">
-            <p class="font-bold text-white text-xs truncate">
-              {{ myPlayerNumber === 2 ? '🧑 You' : '👤 Opponent' }} — Yellow
-            </p>
+            <p class="font-bold text-white text-xs truncate">{{ myPlayerNumber === 2 ? '🧑 You' : '👤 Opponent' }} — Yellow</p>
             <p class="text-[10px]" :class="currentPlayer === 2 && gameStatus === 'playing' ? 'text-yellow-400' : 'text-slate-500'">
               {{ currentPlayer === 2 && gameStatus === 'playing' ? '▶ Playing…' : 'Waiting' }}
             </p>
@@ -88,20 +75,26 @@
       </div>
 
       <!-- Opponent disconnect notice -->
-      <div v-if="opponentDisconnected && gameStatus === 'playing'"
-           class="max-w-6xl mx-auto mb-3">
+      <div v-if="opponentDisconnected && gameStatus === 'playing'" class="max-w-6xl mx-auto mb-3">
         <div class="bg-orange-950 border border-orange-700 text-orange-300 rounded-xl px-4 py-3 text-sm text-center">
-          ⚠️ Opponent disconnected — they have
-          <span class="font-bold">{{ disconnectCountdown }}s</span>
-          to reconnect before forfeiting.
+          ⚠️ Opponent disconnected — <span class="font-bold">{{ disconnectCountdown }}s</span> to reconnect before forfeiting.
         </div>
       </div>
 
       <!-- Winner banner -->
       <div v-if="gameStatus === 'finished'" class="max-w-6xl mx-auto mb-4">
-        <div class="rounded-xl p-4 text-center font-bold text-lg border-2"
-          :class="winnerBannerClass">
-          {{ winnerBannerText }}
+        <div class="rounded-xl p-4 text-center border-2 space-y-3" :class="winnerBannerClass">
+          <p class="font-bold text-lg">{{ winnerBannerText }}</p>
+          <div class="flex gap-3 justify-center">
+            <button @click="playAgain"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg transition-all">
+              🔄 Play Again
+            </button>
+            <button @click="goBack"
+              class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-bold px-5 py-2 rounded-lg transition-all">
+              ← Lobby
+            </button>
+          </div>
         </div>
       </div>
 
@@ -110,6 +103,14 @@
         <div class="bg-red-950 border border-red-700 text-red-300 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
           <span>{{ errorMessage }}</span>
           <button @click="store.setError(null)" class="ml-3 text-red-400 hover:text-white font-bold">×</button>
+        </div>
+      </div>
+
+      <!-- AI suggestion banner -->
+      <div v-if="suggestedCol !== null && gameStatus === 'playing'" class="max-w-6xl mx-auto mb-3">
+        <div class="bg-emerald-950 border border-emerald-700 text-emerald-300 rounded-xl px-4 py-2 text-sm text-center flex items-center justify-center gap-3">
+          <span>🤖 AI suggests: <strong>Column {{ suggestedCol + 1 }}</strong></span>
+          <button @click="suggestedCol = null" class="text-emerald-500 hover:text-white font-bold text-lg leading-none">×</button>
         </div>
       </div>
 
@@ -123,20 +124,19 @@
             :boardSize="boardSize"
             :winningCells="winningCells"
             :canPlay="isMyTurn"
+            :suggestedCol="suggestedCol"
             @col-clicked="onColClicked"
           />
-
-          <!-- Turn hint below board -->
           <p class="mt-3 text-center text-xs font-semibold"
              :class="isMyTurn ? 'text-emerald-400 animate-pulse' : 'text-slate-500'">
-            {{ isMyTurn ? '⬆ Click a column to play' : (gameStatus === 'finished' ? '' : "Opponent's turn…") }}
+            {{ isMyTurn ? '⬆ Click a column to play' : gameStatus === 'finished' ? '' : "Opponent's turn…" }}
           </p>
         </div>
 
         <!-- Sidebar -->
         <div class="space-y-3 min-w-0">
 
-          <!-- Status card -->
+          <!-- Status + actions card -->
           <div class="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Status</span>
@@ -151,12 +151,25 @@
             </div>
 
             <div class="text-xs text-slate-400">
-              You are <span class="font-bold" :class="myPlayerNumber === 1 ? 'text-red-400' : 'text-yellow-400'">
+              You are
+              <span class="font-bold" :class="myPlayerNumber === 1 ? 'text-red-400' : 'text-yellow-400'">
                 {{ myPlayerNumber === 1 ? '🔴 Red' : '🟡 Yellow' }}
               </span>
             </div>
 
             <div class="border-t border-slate-700/50"></div>
+
+            <!-- AI Suggestion button -->
+            <button
+              v-if="gameStatus === 'playing'"
+              @click="computeSuggestion"
+              :disabled="isSuggesting || !isMyTurn"
+              class="w-full text-left px-3 py-2 rounded-lg font-bold text-sm transition-all hover:bg-slate-700 disabled:opacity-40 text-emerald-300"
+            >
+              {{ isSuggesting ? '⏳ Analysing…' : '🤖 AI Suggestion' }}
+            </button>
+
+            <div v-if="gameStatus === 'playing'" class="border-t border-slate-700/50"></div>
 
             <!-- Share link in sidebar -->
             <div v-if="shareableUrl" class="space-y-1.5">
@@ -183,7 +196,9 @@
 
           <!-- Move history -->
           <div class="bg-slate-800 rounded-xl border border-slate-700 p-4">
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Moves</p>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              Moves ({{ moveHistory.length }})
+            </p>
             <div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto">
               <span
                 v-for="(move, i) in moveHistory"
@@ -204,8 +219,8 @@
             <p class="text-[10px] text-slate-600 mt-1">Board: {{ boardSize.rows }} × {{ boardSize.cols }}</p>
           </div>
 
-        </div>
-      </div>
+        </div><!-- /sidebar -->
+      </div><!-- /main grid -->
     </template>
 
     <!-- ── ERROR STATE ────────────────────────────────────────────────── -->
@@ -222,18 +237,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Navbar from '../components/Navbar.vue';
 import MultiplayerBoard from '../components/MultiplayerBoard.vue';
 import { useMultiplayerStore } from '../stores/multiplayerStore';
 import { useMultiplayer } from '../composables/useMultiplayer';
+import { useMinimax } from '../composables/useMinimax';
 
 const route = useRoute();
 const router = useRouter();
 const store = useMultiplayerStore();
 const { joinGame, sendMove, disconnect } = useMultiplayer();
+const { analyseAsync } = useMinimax();
 
 const {
   myPlayerNumber,
@@ -252,9 +269,28 @@ const {
   isMyTurn,
 } = storeToRefs(store);
 
-// ── Copy link ────────────────────────────────────────────────────────────────
-const copied = ref(false);
+// ── AI suggestion ─────────────────────────────────────────────────────────────
+const suggestedCol = ref(null);
+const isSuggesting = ref(false);
 
+const computeSuggestion = async () => {
+  if (isSuggesting.value || !isMyTurn.value) return;
+  isSuggesting.value = true;
+  suggestedCol.value = null;
+  try {
+    // Run minimax locally at depth 4 — quick and strong enough for hints
+    const { bestCol } = await analyseAsync(board.value, 4);
+    suggestedCol.value = bestCol;
+  } finally {
+    isSuggesting.value = false;
+  }
+};
+
+// Clear suggestion whenever the board changes (a move was made)
+watch(moveHistory, () => { suggestedCol.value = null; }, { deep: true });
+
+// ── Copy link ─────────────────────────────────────────────────────────────────
+const copied = ref(false);
 const currentUrl = computed(() => window.location.href);
 
 const copyLink = async () => {
@@ -273,12 +309,10 @@ const copyLink = async () => {
   setTimeout(() => { copied.value = false; }, 2000);
 };
 
-// ── Winner banner ────────────────────────────────────────────────────────────
+// ── Winner banner ─────────────────────────────────────────────────────────────
 const winnerBannerText = computed(() => {
-  if (winner.value === null) return '🤝 It\'s a draw!';
-  const youWon = winner.value === myPlayerNumber.value;
-  if (youWon) return '🏆 You won!';
-  return `${winner.value === 1 ? '🔴 Red' : '🟡 Yellow'} wins!`;
+  if (winner.value === null) return "🤝 It's a draw!";
+  return winner.value === myPlayerNumber.value ? '🏆 You won!' : `${winner.value === 1 ? '🔴 Red' : '🟡 Yellow'} wins!`;
 });
 
 const winnerBannerClass = computed(() => {
@@ -288,33 +322,24 @@ const winnerBannerClass = computed(() => {
     : 'border-yellow-400 bg-yellow-950/50 text-yellow-400';
 });
 
-// ── Move handler ─────────────────────────────────────────────────────────────
+// ── Move handler ──────────────────────────────────────────────────────────────
 const onColClicked = (col) => {
   if (!isMyTurn.value) return;
+  suggestedCol.value = null;
   sendMove(col);
 };
 
-// ── Navigation ───────────────────────────────────────────────────────────────
-const goBack = () => {
-  disconnect();
-  router.push('/multiplayer');
-};
+// ── Navigation ────────────────────────────────────────────────────────────────
+const goBack = () => { disconnect(); router.push('/multiplayer'); };
+const playAgain = () => { disconnect(); router.push('/multiplayer'); };
 
-// ── Lifecycle ────────────────────────────────────────────────────────────────
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(async () => {
   const urlRoomId = route.params.roomId;
-  if (!urlRoomId) {
-    router.push('/multiplayer');
-    return;
-  }
+  if (!urlRoomId) { router.push('/multiplayer'); return; }
 
-  // Player 1 navigated here from the lobby after gameStarted fired.
-  // Their store already has the correct state — no need to emit joinRoom again.
-  if (
-    store.roomId === urlRoomId &&
-    myPlayerNumber.value !== null &&
-    gameStatus.value === 'playing'
-  ) {
+  // Player 1 navigated here from the lobby after gameStarted fired — state is already correct.
+  if (store.roomId === urlRoomId && myPlayerNumber.value !== null && gameStatus.value === 'playing') {
     return;
   }
 
@@ -323,10 +348,6 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  // Don't disconnect if navigating within the app (e.g. lobby → game);
-  // Only disconnect if gameStatus is 'finished' or 'error'
-  if (gameStatus.value === 'finished' || gameStatus.value === 'error') {
-    disconnect();
-  }
+  if (gameStatus.value === 'finished' || gameStatus.value === 'error') disconnect();
 });
 </script>

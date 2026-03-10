@@ -4,18 +4,11 @@
  * Composable that manages the Socket.io connection and all multiplayer
  * game logic. Keeps the multiplayerStore in sync with server events.
  *
- * ─── Usage ───────────────────────────────────────────────────────────────────
+ * ─── URL resolution ──────────────────────────────────────────────────────────
  *
- *   const { createGame, joinGame, sendMove, disconnect } = useMultiplayer();
- *
- *   // Create a room (calls REST API then registers via socket)
- *   await createGame({ rows: 6, cols: 7 });
- *
- *   // Join an existing room (called from /game/:roomId route)
- *   await joinGame(roomId);
- *
- *   // Play a move
- *   sendMove(col);
+ * In development (localhost), connects to http://localhost:3000.
+ * In production (Netlify or any non-localhost host), connects to the Render.com
+ * backend. Override via VITE_SOCKET_URL / VITE_API_URL env vars.
  *
  * ─── Socket Events Handled ───────────────────────────────────────────────────
  *
@@ -34,12 +27,21 @@ import { io } from 'socket.io-client';
 import { ref } from 'vue';
 import { useMultiplayerStore } from '../stores/multiplayerStore';
 
-// ── Determine server URL ──────────────────────────────────────────────────────
-// Set VITE_SOCKET_URL in .env.local for production (e.g. https://your-api.onrender.com)
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// ── Backend URL resolution ────────────────────────────────────────────────────
+// Priority: env var → auto-detect (localhost vs production)
+const PRODUCTION_BACKEND = 'https://connect4-backend-xodq.onrender.com';
+const isLocalhost = () =>
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// Singleton socket — created once, reused across component unmounts
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL
+  || (isLocalhost() ? 'http://localhost:3000' : PRODUCTION_BACKEND);
+
+const API_URL = import.meta.env.VITE_API_URL
+  || (isLocalhost() ? 'http://localhost:3000/api' : `${PRODUCTION_BACKEND}/api`);
+
+// ── Singleton socket ──────────────────────────────────────────────────────────
+// Module-level so the socket persists across component mounts/unmounts.
 let socket = null;
 let countdownInterval = null;
 
@@ -51,15 +53,18 @@ export function useMultiplayer() {
 
   /**
    * Ensure the socket is connected. Creates a new connection if needed.
+   * Registers all event listeners only once per socket instance.
    */
   const ensureConnected = () => {
     if (socket && socket.connected) return socket;
 
     socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+      // Polling first is more reliable for cold-starting servers (e.g. Render free tier);
+      // socket.io client automatically upgrades to WebSocket after the initial handshake.
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionDelay: 1500,
     });
 
     socket.on('connect', () => {
@@ -71,7 +76,6 @@ export function useMultiplayer() {
       store.setError('Unable to connect to the game server. Please try again.');
     });
 
-    // Register all event listeners
     registerListeners();
 
     return socket;
@@ -124,7 +128,8 @@ export function useMultiplayer() {
       store.setMoveHistory(moves ?? []);
       store.setGameStatus('finished');
       if (forfeit) {
-        store.setError(null); // Clear any previous errors
+        // Clear any error that was set when the disconnect was detected
+        store.setError(null);
       }
       console.log('[Socket] Game ended — winner:', winner ?? 'draw');
     });
@@ -134,7 +139,6 @@ export function useMultiplayer() {
       store.setOpponentDisconnected(true);
       store.setDisconnectCountdown(Math.ceil(gracePeriodMs / 1000));
 
-      // Start visual countdown
       clearInterval(countdownInterval);
       countdownInterval = setInterval(() => {
         const next = store.disconnectCountdown - 1;
@@ -168,7 +172,7 @@ export function useMultiplayer() {
       console.log('[Socket] Room state synced after reconnect');
     });
 
-    // ── playerJoined: Opponent entered the waiting room
+    // ── playerJoined: Opponent entered the waiting room (informational)
     socket.on('playerJoined', ({ playerCount }) => {
       console.log('[Socket] Player joined — count:', playerCount);
     });
@@ -195,7 +199,6 @@ export function useMultiplayer() {
     store.reset();
 
     try {
-      // Step 1: Create room via HTTP
       const res = await fetch(`${API_URL}/rooms`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -205,7 +208,6 @@ export function useMultiplayer() {
       if (!res.ok) throw new Error('Failed to create room on server');
       const { roomId } = await res.json();
 
-      // Step 2: Connect socket and register as player 1
       ensureConnected();
       socket.emit('createRoom', { roomId });
 
@@ -222,24 +224,21 @@ export function useMultiplayer() {
 
   /**
    * Join an existing game room (player 2 or reconnect).
-   * Emits `joinRoom` via socket.
    *
    * @param {string} roomId
    */
   const joinGame = async (roomId) => {
     isConnecting.value = true;
 
-    // If we're reconnecting to the same room we were in, keep store state
     if (store.roomId !== roomId) {
       store.reset();
       store.setRoom(roomId, `${window.location.origin}/game/${roomId}`);
     }
 
     try {
-      // Verify room still exists via HTTP before opening socket
       const res = await fetch(`${API_URL}/rooms/${roomId}`);
       if (!res.ok) {
-        store.setError('Room not found or game has ended.');
+        store.setError('Room not found or game has already ended.');
         return;
       }
 
@@ -254,16 +253,16 @@ export function useMultiplayer() {
 
   /**
    * Send a move to the server.
-   * The server will validate it, apply it, and broadcast the result.
+   * The server validates, applies gravity, checks win, and broadcasts.
    *
-   * @param {number} col - 0-indexed column number
+   * @param {number} col - 0-indexed column
    */
   const sendMove = (col) => {
     if (!socket || !socket.connected) {
       store.setError('Not connected to the game server.');
       return;
     }
-    if (!store.isMyTurn) return; // Guard against out-of-turn clicks
+    if (!store.isMyTurn) return;
 
     socket.emit('makeMove', { roomId: store.roomId, col });
   };

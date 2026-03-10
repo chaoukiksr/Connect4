@@ -1,7 +1,7 @@
 <template>
   <div class="bg-slate-900 rounded-xl select-none">
 
-    <!-- Column numbers + hover indicator -->
+    <!-- Column numbers + hover / suggestion indicator -->
     <div
       class="grid gap-1.5 mb-2"
       :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
@@ -9,9 +9,13 @@
       <div
         v-for="c in cols"
         :key="c"
-        class="text-center text-xs font-bold transition-colors duration-200 cursor-pointer"
+        class="text-center text-xs font-bold transition-colors duration-200"
         :class="[
-          hoveredCol === c - 1 && canPlay ? 'text-white' : 'text-slate-500',
+          suggestedCol === c - 1
+            ? 'text-emerald-400 animate-pulse'
+            : hoveredCol === c - 1 && canPlay
+              ? 'text-white'
+              : 'text-slate-500',
           canPlay ? 'cursor-pointer' : 'cursor-not-allowed',
         ]"
         @click="handleColClick(c - 1)"
@@ -19,7 +23,10 @@
         @mouseleave="hoveredCol = null"
       >
         {{ c }}
-        <span v-if="hoveredCol === c - 1 && canPlay" class="block text-[9px] leading-none">▼</span>
+        <!-- AI suggestion arrow -->
+        <span v-if="suggestedCol === c - 1" class="block text-[9px] leading-none">▼</span>
+        <!-- Hover arrow -->
+        <span v-else-if="hoveredCol === c - 1 && canPlay" class="block text-[9px] leading-none opacity-50">▼</span>
       </div>
     </div>
 
@@ -59,6 +66,8 @@ const props = defineProps({
   winningCells: { type: Array, default: () => [] },
   /** True when this client is allowed to click (their turn, game playing) */
   canPlay: { type: Boolean, default: false },
+  /** AI-suggested column (0-indexed), or null */
+  suggestedCol: { type: Number, default: null },
 });
 
 const emit = defineEmits(['col-clicked']);
@@ -69,22 +78,19 @@ const totalCells = computed(() => rows.value * cols.value);
 
 const hoveredCol = ref(null);
 
-/**
- * Emit the clicked column index. Guard happens at parent level too,
- * but we also guard here to avoid double-clicks.
- */
 const handleColClick = (col) => {
   if (!props.canPlay) return;
   emit('col-clicked', col);
 };
 
 /**
- * Determine CSS classes for each cell based on its value and state.
+ * Determine CSS classes for each cell based on its value and highlighted state.
  */
 const getCellClass = (row, col) => {
   const value = props.board?.[row]?.[col] ?? 0;
   const isWinning = props.winningCells.some((c) => c.row === row && c.col === col);
   const isHoveredCol = hoveredCol.value === col;
+  const isSuggestedCol = props.suggestedCol === col;
 
   if (isWinning) {
     return value === 1
@@ -98,7 +104,8 @@ const getCellClass = (row, col) => {
   // Empty cell
   return [
     'bg-slate-900/80 border border-slate-700/30',
-    isHoveredCol && props.canPlay ? 'ring-1 ring-white/20' : '',
+    isSuggestedCol ? 'ring-1 ring-emerald-400/50' : '',
+    isHoveredCol && props.canPlay && !isSuggestedCol ? 'ring-1 ring-white/20' : '',
   ];
 };
 </script>
