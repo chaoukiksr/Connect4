@@ -222,7 +222,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Navbar from '../components/Navbar.vue';
@@ -308,14 +308,17 @@ onMounted(async () => {
     return;
   }
 
-  // If we're already in this room and the game is active, restore via socket reconnect
-  if (store.roomId === urlRoomId && (gameStatus.value === 'playing' || gameStatus.value === 'waiting')) {
-    // Reconnect the socket to the room to sync state
-    await joinGame(urlRoomId);
+  // Player 1 navigated here from the lobby after gameStarted fired.
+  // Their store already has the correct state — no need to emit joinRoom again.
+  if (
+    store.roomId === urlRoomId &&
+    myPlayerNumber.value !== null &&
+    gameStatus.value === 'playing'
+  ) {
     return;
   }
 
-  // New visitor to this room URL (player 2 or page refresh)
+  // Player 2 opening the link fresh, or either player reconnecting after a page refresh
   await joinGame(urlRoomId);
 });
 
