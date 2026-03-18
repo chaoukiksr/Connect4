@@ -23,17 +23,17 @@ export function useApi(){
    }
 
    const savedGameToDatabase = async (extra = {}) => {
-      const moveSequence = getMoveSequenceFromMoveHistory();
-      
+      const moveSequence = extra.signature ?? getMoveSequenceFromMoveHistory();
+
       // Ensure status is a valid string
       const status = gameStatus.value || 'finished';
-      
+
       // Properly stringify ligne_gagnante (winning cells)
       let ligneGagnante = null;
       if (winningCells.value && Array.isArray(winningCells.value) && winningCells.value.length > 0) {
          ligneGagnante = JSON.stringify(winningCells.value);
       }
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/games`, {
          method: 'POST',

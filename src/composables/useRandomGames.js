@@ -1,8 +1,8 @@
 // src/composables/useRandomGames.js
-import { useFileManagement } from './useFileManagement';
+import { useApi } from './useApi';
 
 export function useRandomGames() {
-  const { save } = useFileManagement();
+  const { savedGameToDatabase } = useApi();
 
   const generateRandomGame = () => {
     // Valeurs aléatoires pour chaque case
@@ -35,13 +35,20 @@ export function useRandomGames() {
     };
   };
 
-  const generateMultipleGames = (n = 10) => {
+  const generateMultipleGames = async (n = 10) => {
     for (let i = 0; i < n; i++) {
       const game = generateRandomGame();
-      save(game); // sauvegarde dans localStorage
+      await savedGameToDatabase({
+        signature: game.history.join(''),
+        mode: 'random',
+        type_partie: game.gameMode,
+        status: game.gameStatus,
+        startingPlayer: game.startingPlayer,
+        winner: game.winner,
+        ligne_gagnante: null,
+      });
     }
-    console.log('des parite ont été génerer');
-    
+    console.log('des parties ont été générées et sauvegardées en base de données');
   };
 
   return { generateMultipleGames };
