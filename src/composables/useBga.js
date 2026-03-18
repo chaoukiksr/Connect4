@@ -3,7 +3,7 @@ import { useGameStateStore } from '../stores/gameState';
 import { useGameSettingsStore } from '../stores/gameSettings';
 import { storeToRefs } from 'pinia';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://connect4-backend-xodq.onrender.com';
 
 /**
  * Parse a BGA move signature into structured { row, col, player } move objects.
