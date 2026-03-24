@@ -31,16 +31,16 @@
 
       <!-- Taille plateau -->
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Taille du plateau (9×9)</label>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Taille du plateau</label>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="text-xs text-slate-500 mb-1 block">Lignes</label>
-            <input v-model.number="formData.rows" type="number" min="9" max="9"
+            <input v-model.number="formData.rows" type="number" min="4" step="1"
               class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" />
           </div>
           <div>
             <label class="text-xs text-slate-500 mb-1 block">Colonnes</label>
-            <input v-model.number="formData.columns" type="number" min="9" max="9"
+            <input v-model.number="formData.columns" type="number" min="4" step="1"
               class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" />
           </div>
         </div>
@@ -174,9 +174,9 @@ const formData = reactive({
   startingPlayer: "red",
   humanPlayer: 1,     // 1 = human plays Red, 2 = human plays Yellow
 
-  // grille fixée 9x9
-  rows: 9,
-  columns: 9,
+  // grille par défaut (Connect 4 classique)
+  rows: 6,
+  columns: 7,
 
   // NOUVEAU champ demandé
   confiance: 1,
@@ -195,12 +195,15 @@ function cancelGame() {
 }
 
 function startGame() {
-  if (formData.rows !== 9 || formData.columns !== 9) {
-    alert("La grille doit être 9x9")
+  const rows = Number(formData.rows)
+  const columns = Number(formData.columns)
+
+  if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 4 || columns < 4) {
+    alert("La grille doit avoir au moins 4 lignes et 4 colonnes")
     return
   }
 
-  emit("submit", { ...formData })
+  emit("submit", { ...formData, rows, columns })
   closeModal()
 }
 </script>
