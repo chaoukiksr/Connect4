@@ -102,6 +102,28 @@
                <p class="text-4xl mb-3">🎮</p>
                <p class="text-slate-500">Aucune partie dans la base de données</p>
             </div>
+
+            <!-- Pagination -->
+            <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 pt-4 border-t border-slate-700">
+               <span class="text-xs text-slate-400">
+                  Page {{ currentPage }} / {{ totalPages }} &nbsp;·&nbsp; {{ totalGames }} parties
+               </span>
+               <div class="flex gap-1">
+                  <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
+                     class="px-3 py-1 rounded-lg text-sm font-bold transition-all
+                            disabled:opacity-30 bg-slate-700 hover:bg-slate-600 text-white">‹</button>
+                  <button v-for="p in totalPages" :key="p"
+                     v-if="totalPages <= 10 || Math.abs(p - currentPage) <= 2 || p === 1 || p === totalPages"
+                     @click="goToPage(p)"
+                     class="px-3 py-1 rounded-lg text-sm font-bold transition-all"
+                     :class="p === currentPage
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-300'">{{ p }}</button>
+                  <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
+                     class="px-3 py-1 rounded-lg text-sm font-bold transition-all
+                            disabled:opacity-30 bg-slate-700 hover:bg-slate-600 text-white">›</button>
+               </div>
+            </div>
          </div>
       </section>
 
@@ -117,22 +139,39 @@ const { fetchGames, fetchStats, deleteGame } = useApi();
 
 const loading = ref(false);
 const allGames = ref([]);
+const totalGames = ref(0);
+const currentPage = ref(1);
+const pageSize = 100;
 const stats = ref(null);
 const activeFilter = ref('all');
+
+const totalPages = computed(() => Math.ceil(totalGames.value / pageSize));
 
 const refresh = async () => {
    loading.value = true;
    try {
-      [allGames.value, stats.value] = await Promise.all([fetchGames(), fetchStats().catch(() => null)]);
+      const [gamesData, statsData] = await Promise.all([
+         fetchGames(currentPage.value, pageSize),
+         fetchStats().catch(() => null)
+      ]);
+      allGames.value = gamesData.games;
+      totalGames.value = gamesData.total;
+      stats.value = statsData;
    } finally {
       loading.value = false;
    }
 };
 
+const goToPage = (p) => {
+   if (p < 1 || p > totalPages.value) return;
+   currentPage.value = p;
+   refresh();
+};
+
 onMounted(refresh);
 
 const filterCount = (f) => {
-   if (f === 'all') return allGames.value.length;
+   if (f === 'all') return totalGames.value;
    if (f === 'completed') return allGames.value.filter(g => g.status === 'finished').length;
    if (f === 'random') return allGames.value.filter(g => g.type_partie === 'random').length;
    if (f === 'BGA') return allGames.value.filter(g => g.mode === 'BGA' || g.type_partie === 'scraped').length;

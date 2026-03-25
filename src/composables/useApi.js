@@ -13,13 +13,13 @@ export function useApi(){
    const { moveHistory,currentPlayer,gameStatus,winner,winningCells } = storeToRefs(gameStateStore);
    const { getMoveSequenceFromMoveHistory } = useGame();
 
-   const fetchGames = async () => {
+   const fetchGames = async (page = 1, limit = 100) => {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/games`, {
+      const response = await fetch(`${API_URL}/games?page=${page}&limit=${limit}`, {
          headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await response.json();
-      return data.games || [];
+      return { games: data.games || [], total: data.total || 0, page: data.page || 1, limit: data.limit || limit };
    }
 
    const savedGameToDatabase = async (extra = {}) => {
