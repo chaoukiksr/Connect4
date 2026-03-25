@@ -110,25 +110,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import { useApi } from '../composables/useApi';
 
-const router = useRouter();
 const { fetchGames, fetchStats, deleteGame } = useApi();
-
-// Auth guard
-onMounted(async () => {
-   const token = localStorage.getItem('token');
-   if (!token) { router.push({ name: 'home' }); return; }
-   try {
-      const response = await fetch('https://connect4-backend-xodq.onrender.com/api/games', {
-         headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.status === 403 || response.status === 401) { router.push({ name: 'home' }); return; }
-   } catch { router.push({ name: 'home' }); return; }
-   await refresh();
-});
 
 const loading = ref(false);
 const allGames = ref([]);
@@ -143,6 +128,8 @@ const refresh = async () => {
       loading.value = false;
    }
 };
+
+onMounted(refresh);
 
 const filterCount = (f) => {
    if (f === 'all') return allGames.value.length;

@@ -39,6 +39,11 @@ const router = createRouter({
          name:'database'
       },
       {
+         path:'/dashboard',
+         component:DatabaseView,
+         name:'dashboard'
+      },
+      {
          path:'/register',
          component:RegisterView,
          name:'register'
