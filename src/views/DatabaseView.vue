@@ -49,7 +49,7 @@
                </div>
             </div>
 
-            <!-- Quick stats from local games list -->
+            <!-- Filter tabs -->
             <div class="flex flex-wrap gap-2">
                <span v-for="(label, filter) in { all:'Toutes', completed:'Terminées', random:'Random', BGA:'BGA' }" :key="filter"
                   @click="activeFilter = filter"
@@ -128,15 +128,102 @@
       </section>
 
    </main>
+
+   <!-- Game Preview Modal -->
+   <Teleport to="body">
+      <div v-if="selectedGame"
+           class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+           @click.self="closePreview">
+         <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg">
+
+            <!-- Modal header -->
+            <div class="flex justify-between items-start p-5 pb-3 border-b border-slate-700">
+               <div>
+                  <h3 class="text-white font-bold text-lg">Partie #{{ selectedGame.id_partie }}</h3>
+                  <p class="text-slate-400 text-xs mt-0.5">
+                     {{ selectedGame.type_partie || selectedGame.mode || '—' }}
+                     &nbsp;·&nbsp; {{ selectedGame.signature?.length ?? 0 }} coups
+                     &nbsp;·&nbsp; Gagnant :
+                     <span :class="selectedGame.joueur_gagnant === 'R'
+                        ? 'text-red-400 font-bold'
+                        : selectedGame.joueur_gagnant === 'Y'
+                           ? 'text-yellow-400 font-bold'
+                           : 'text-slate-400'">
+                        {{ selectedGame.joueur_gagnant === 'R' ? 'Rouge' : selectedGame.joueur_gagnant === 'Y' ? 'Jaune' : 'Nul / inconnu' }}
+                     </span>
+                  </p>
+               </div>
+               <button @click="closePreview"
+                  class="text-slate-500 hover:text-white text-xl leading-none transition-colors ml-4">✕</button>
+            </div>
+
+            <!-- Board -->
+            <div class="flex justify-center px-5 pt-4">
+               <Board :key="selectedGame.id_partie" :board="board" :boardSize="previewBoardSize" />
+            </div>
+
+            <!-- Move counter + progress bar -->
+            <div class="px-5 pt-3">
+               <div class="flex justify-between text-xs text-slate-400 mb-1">
+                  <span>Coup {{ historyIndex + 1 }} / {{ moveHistory.length }}</span>
+                  <span>{{ currentMovePlayer }}</span>
+               </div>
+               <div class="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                  <div class="h-full bg-sky-500 rounded-full transition-all duration-200"
+                       :style="{ width: moveHistory.length ? `${((historyIndex + 1) / moveHistory.length) * 100}%` : '0%' }">
+                  </div>
+               </div>
+            </div>
+
+            <!-- Replay controls -->
+            <div class="flex items-center justify-center gap-2 px-5 pt-4">
+               <button @click="goToStart()"
+                  class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition-all"
+                  title="Début">⏮</button>
+               <button @click="stepBackward()"
+                  class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition-all"
+                  title="Reculer">◀</button>
+               <button @click="startAutoReplay()"
+                  class="w-12 h-9 flex items-center justify-center rounded-lg text-white font-bold text-base transition-all"
+                  :class="isReplaying ? 'bg-amber-600 hover:bg-amber-700' : 'bg-sky-600 hover:bg-sky-700'"
+                  title="Lecture / Pause">{{ isReplaying ? '⏸' : '▶' }}</button>
+               <button @click="stepForward()"
+                  class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition-all"
+                  title="Avancer">▶</button>
+               <button @click="goToEnd()"
+                  class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition-all"
+                  title="Fin">⏭</button>
+            </div>
+
+            <!-- Speed slider -->
+            <div class="flex items-center gap-3 px-5 pt-3 pb-5">
+               <span class="text-xs text-slate-500 shrink-0">🐢</span>
+               <input type="range" v-model.number="replaySpeed" min="200" max="2000" step="100"
+                  class="flex-1 accent-sky-500" />
+               <span class="text-xs text-slate-500 shrink-0">🐇</span>
+               <span class="text-xs text-slate-400 w-14 text-right shrink-0">{{ replaySpeed }}ms</span>
+            </div>
+
+         </div>
+      </div>
+   </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { storeToRefs } from 'pinia';
 import Navbar from '../components/Navbar.vue';
+import Board from '../components/Board.vue';
 import { useApi } from '../composables/useApi';
+import { useBga } from '../composables/useBga';
+import { useReplay } from '../composables/useReplay';
+import { useGameStateStore } from '../stores/gameState';
+import { useGameSettingsStore } from '../stores/gameSettings';
 
+// ── API ──────────────────────────────────────────────────────────────────────
 const { fetchGames, fetchStats, deleteGame } = useApi();
 
+// ── Pagination & list state ───────────────────────────────────────────────────
 const loading = ref(false);
 const allGames = ref([]);
 const totalGames = ref(0);
@@ -187,20 +274,48 @@ const games = computed(() => {
    }
 });
 
+// ── Game preview ──────────────────────────────────────────────────────────────
+const gameState = useGameStateStore();
+const gameSettings = useGameSettingsStore();
+const { board, historyIndex, moveHistory, currentPlayer } = storeToRefs(gameState);
+const { loadFromSignature } = useBga();
+const { isReplaying, replaySpeed, startAutoReplay, stopAutoReplay, stepForward, stepBackward, goToStart, goToEnd } = useReplay();
+
 const selectedGame = ref(null);
-const situations = ref([]);
-const currentSituationIndex = ref(0);
+const previewBoardSize = ref({ rows: 6, cols: 7 });
 
-const currentSituation = computed(() => situations.value[currentSituationIndex.value] || null);
+const currentMovePlayer = computed(() => {
+   if (historyIndex.value < 0) return 'Début';
+   const move = moveHistory.value[historyIndex.value];
+   return move?.player === 1 ? 'Rouge joue' : 'Jaune joue';
+});
 
-const handleView = (game) => { selectedGame.value = game; };
+const handleView = (game) => {
+   selectedGame.value = game;
+   // Parse "7x6" → { cols: 7, rows: 6 }
+   const [cols, rows] = (game.board_size || '7x6').split('x').map(Number);
+   previewBoardSize.value = { rows: rows || 6, cols: cols || 7 };
+   gameSettings.setBoardSize(previewBoardSize.value);
+   const startPlayer = game.joueur_depart === 'Y' ? 2 : 1;
+   loadFromSignature(game.signature, startPlayer);
+   goToEnd(); // show final board state immediately
+};
 
+const closePreview = () => {
+   stopAutoReplay();
+   selectedGame.value = null;
+   gameState.resetGame();
+};
+
+onBeforeUnmount(() => stopAutoReplay());
+
+// ── Delete ────────────────────────────────────────────────────────────────────
 const handleDelete = async (id) => {
    if (!confirm(`Supprimer la partie #${id} ?`)) return;
    const { ok, data } = await deleteGame(id);
    if (ok) {
       allGames.value = allGames.value.filter(g => g.id_partie !== id);
-      if (selectedGame.value?.id_partie === id) selectedGame.value = null;
+      if (selectedGame.value?.id_partie === id) closePreview();
    } else {
       alert(data?.error || 'Erreur lors de la suppression.');
    }

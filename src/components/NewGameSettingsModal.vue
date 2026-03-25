@@ -46,27 +46,6 @@
         </div>
       </div>
 
-      <!-- Joueur qui commence -->
-      <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Joueur qui commence</label>
-        <div class="flex gap-2">
-          <button @click="formData.startingPlayer = 'red'"
-            class="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-bold border transition-all"
-            :class="formData.startingPlayer === 'red'
-              ? 'bg-red-700/60 border-red-500 text-white'
-              : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">
-            <span class="w-3 h-3 rounded-full bg-red-500"></span> Rouge
-          </button>
-          <button @click="formData.startingPlayer = 'yellow'"
-            class="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-bold border transition-all"
-            :class="formData.startingPlayer === 'yellow'
-              ? 'bg-yellow-700/60 border-yellow-400 text-white'
-              : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">
-            <span class="w-3 h-3 rounded-full bg-yellow-400"></span> Jaune
-          </button>
-        </div>
-      </div>
-
       <!-- Je joue en tant que (PvE seulement) -->
       <div v-if="formData.gameMode === 1">
         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Je joue en tant que</label>
@@ -76,14 +55,14 @@
             :class="formData.humanPlayer === 1
               ? 'bg-red-700/60 border-red-500 text-white'
               : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">
-            <span class="w-3 h-3 rounded-full bg-red-500"></span> Rouge (1er)
+            <span class="w-3 h-3 rounded-full bg-red-500"></span> Rouge
           </button>
           <button @click="formData.humanPlayer = 2"
             class="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-bold border transition-all"
             :class="formData.humanPlayer === 2
               ? 'bg-yellow-700/60 border-yellow-400 text-white'
               : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">
-            <span class="w-3 h-3 rounded-full bg-yellow-400"></span> Jaune (2ème)
+            <span class="w-3 h-3 rounded-full bg-yellow-400"></span> Jaune
           </button>
         </div>
       </div>
