@@ -71,19 +71,6 @@
       <div v-if="formData.gameMode !== 2" class="space-y-5">
         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Paramètres IA</label>
 
-        <!-- Confiance IA -->
-        <div>
-          <div class="flex justify-between text-sm mb-2">
-            <span class="text-slate-300">Confiance IA</span>
-            <span class="font-bold text-emerald-400">{{ formData.confiance }}</span>
-          </div>
-          <input v-model.number="formData.confiance" type="range" min="0" max="3"
-            class="w-full accent-emerald-500" />
-          <div class="flex justify-between text-xs text-slate-500 mt-1">
-            <span>0 = perd exprès</span><span>1 = aléatoire</span><span>2+ = intelligent</span>
-          </div>
-        </div>
-
         <!-- Mode IA -->
         <div>
           <label class="block text-xs text-slate-400 mb-2">Mode IA</label>
@@ -156,9 +143,6 @@ const formData = reactive({
   // grille par défaut (Connect 4 classique)
   rows: 6,
   columns: 7,
-
-  // NOUVEAU champ demandé
-  confiance: 1,
 
   aiMode: "minimax",
   aiDepth: 5
