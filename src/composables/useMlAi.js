@@ -14,7 +14,12 @@
 
 import { ref } from 'vue';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const PROD_API_BASE = 'https://connect4-backend-xodq.onrender.com';
+const API_BASE = import.meta.env.VITE_API_URL || (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : PROD_API_BASE
+);
 
 export function useMlAi() {
   const isThinking = ref(false);

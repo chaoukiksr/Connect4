@@ -55,9 +55,16 @@ export function useGame() {
             setAiThinkingProgress(0);
             let aiCol;
             if (aiMode.value === 'ml') {
-              aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
-                setAiThinkingProgress(progress);
-              });
+              try {
+                aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
+                  setAiThinkingProgress(progress);
+                });
+              } catch (err) {
+                addLog(`⚠ ML indisponible (${err.message}). Bascule sur Minimax.`);
+                aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
+                  setAiThinkingProgress(progress);
+                });
+              }
             } else {
               aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
                 setAiThinkingProgress(progress);
@@ -79,9 +86,16 @@ export function useGame() {
         setAiThinkingProgress(0);
         let aiCol;
         if (aiMode.value === 'ml') {
-          aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
-            setAiThinkingProgress(progress);
-          });
+          try {
+            aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
+              setAiThinkingProgress(progress);
+            });
+          } catch (err) {
+            addLog(`⚠ ML indisponible (${err.message}). Bascule sur Minimax.`);
+            aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
+              setAiThinkingProgress(progress);
+            });
+          }
         } else {
           aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
             setAiThinkingProgress(progress);
