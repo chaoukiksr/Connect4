@@ -85,6 +85,11 @@
               :class="formData.aiMode === 'minimax'
                 ? 'bg-emerald-600 border-emerald-500 text-white'
                 : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">Minimax</button>
+            <button @click="formData.aiMode = 'ml'"
+              class="flex-1 py-2 rounded-lg text-sm font-bold border transition-all"
+              :class="formData.aiMode === 'ml'
+                ? 'bg-purple-600 border-purple-500 text-white'
+                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'">ML ✨</button>
           </div>
         </div>
 
@@ -96,6 +101,17 @@
           </div>
           <input v-model.number="formData.aiDepth" type="range" min="1" max="10"
             class="w-full accent-emerald-500" />
+        </div>
+
+        <!-- ML simulations -->
+        <div v-if="formData.aiMode === 'ml'">
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-slate-300">Simulations MCTS</span>
+            <span class="font-bold text-purple-400">{{ formData.mlSimulations }}</span>
+          </div>
+          <input v-model.number="formData.mlSimulations" type="range" min="50" max="800" step="50"
+            class="w-full accent-purple-500" />
+          <p class="text-xs text-slate-500 mt-1">50-100 = rapide · 200-400 = fort · 800 = max</p>
         </div>
       </div>
 
@@ -145,7 +161,8 @@ const formData = reactive({
   columns: 7,
 
   aiMode: "minimax",
-  aiDepth: 5
+  aiDepth: 5,
+  mlSimulations: 200
 })
 
 /* functions */

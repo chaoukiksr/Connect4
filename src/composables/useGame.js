@@ -3,19 +3,21 @@ import { useGameStateStore } from "../stores/gameState";
 import { storeToRefs } from "pinia";
 import { useWinCheck } from "./useWinCheck";
 import { useGameFlow } from "./useGameFlow";
-import { useMinimax } from "./useMinimax"; // <- import du minimax
+import { useMinimax } from "./useMinimax";
+import { useMlAi } from "./useMlAi";
 
 export function useGame() {
   const { isCurrentPlayerAI, triggerAIMove, setFillColCallback } = useGameFlow();
   const gameSettingsStore = useGameSettingsStore();
   const gameStateStore = useGameStateStore();
 
-  const { boardSize, aiDepth } = storeToRefs(gameSettingsStore);
+  const { boardSize, aiDepth, aiMode, mlSimulations } = storeToRefs(gameSettingsStore);
   const { board, currentPlayer, gameStatus } = storeToRefs(gameStateStore);
   const { addMove, setAiThinkingProgress, addLog } = gameStateStore;
   const {moveHistory} = storeToRefs(gameStateStore);
   const { checkProbableWin } = useWinCheck();
-  const { getBestMove, getBestMoveAsync } = useMinimax(); // <- on récupère la fonction
+  const { getBestMove, getBestMoveAsync } = useMinimax();
+  const { getBestMoveAsync: getMlMoveAsync } = useMlAi();
 
   const isColAvailable = (col) => board.value[0][col] === 0;
 
@@ -51,10 +53,16 @@ export function useGame() {
         if (gameStatus.value === "playing" && isCurrentPlayerAI()) {
           triggerAIMove(async () => {
             setAiThinkingProgress(0);
-            //Calcule la meilleure colonne avec Minimax.
-            const aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
-              setAiThinkingProgress(progress);
-            });
+            let aiCol;
+            if (aiMode.value === 'ml') {
+              aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
+                setAiThinkingProgress(progress);
+              });
+            } else {
+              aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
+                setAiThinkingProgress(progress);
+              });
+            }
             if (aiCol !== null) fillCol(aiCol);
           });
         }
@@ -69,9 +77,16 @@ export function useGame() {
     if (isCurrentPlayerAI()) {
       triggerAIMove(async () => {
         setAiThinkingProgress(0);
-        const aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
-          setAiThinkingProgress(progress);
-        });
+        let aiCol;
+        if (aiMode.value === 'ml') {
+          aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
+            setAiThinkingProgress(progress);
+          });
+        } else {
+          aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
+            setAiThinkingProgress(progress);
+          });
+        }
         if (aiCol !== null) fillCol(aiCol);
       });
     }
