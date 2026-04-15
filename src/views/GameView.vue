@@ -75,6 +75,7 @@
                :boardSize="boardSize"
                :suggestedCol="suggestedCol"
                :paintMode="paintMode"
+               :currentPlayer="currentPlayer"
                @paint-cell="onPaintCell"
             />
             <!-- AI suggestion result -->
@@ -125,6 +126,17 @@
 
                <div class="border-t border-slate-700/50"></div>
 
+               <!-- Predict outcome -->
+               <button
+                  v-if="gameStatus === 'playing' || gameStatus === 'paused'"
+                  @click="computePrediction"
+                  :disabled="isPredicting"
+                  class="w-full text-left px-3 py-2 rounded-lg font-bold text-sm transition-all hover:bg-slate-700 disabled:opacity-40 text-purple-300">
+                  {{ isPredicting ? '⏳ Prédiction…' : '🔮 Prédire la partie' }}
+               </button>
+
+               <div class="border-t border-slate-700/50"></div>
+
                <!-- Mode switch -->
                <button v-if="gameStatus === 'playing' || gameStatus === 'paused'"
                   @click="switchMode"
@@ -163,6 +175,63 @@
                   class="w-full text-left px-3 py-2 rounded-lg font-bold text-sm text-red-400 hover:bg-slate-700 transition-all">
                   ✕ Quitter
                </button>
+            </div>
+
+            <!-- ── 1b · Prediction result ─────────────────────────── -->
+            <div v-if="isPredicting || predictionResult"
+               class="bg-slate-800 rounded-xl border border-purple-700/40 p-4">
+               <p class="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-3">Prédiction IA</p>
+
+               <!-- Loading -->
+               <div v-if="isPredicting" class="space-y-2">
+                  <p class="text-xs text-slate-400 text-center">Analyse en cours…</p>
+                  <div class="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                     <div class="h-full bg-purple-500 rounded-full transition-all duration-200"
+                        :style="{ width: predictProgress + '%' }"></div>
+                  </div>
+               </div>
+
+               <!-- Result -->
+               <div v-else-if="predictionResult" class="text-center space-y-1">
+
+                  <!-- Forced win -->
+                  <template v-if="predictionResult.confident && predictionResult.winner && predictionResult.winner !== 0">
+                     <div class="text-xl font-black"
+                        :class="predictionResult.winner === 1 ? 'text-red-400' : 'text-yellow-400'">
+                        {{ predictionResult.winner === 1 ? '🔴 Rouge' : '🟡 Jaune' }}
+                     </div>
+                     <div class="text-sm font-semibold text-slate-200">
+                        gagne dans
+                        <span class="text-white font-black text-base">{{ predictionResult.movesCount }}</span>
+                        coup{{ predictionResult.movesCount > 1 ? 's' : '' }}
+                     </div>
+                     <div class="text-[10px] text-slate-500">avec jeu parfait des deux côtés</div>
+                  </template>
+
+                  <!-- Forced draw -->
+                  <template v-else-if="predictionResult.confident && predictionResult.winner === 0">
+                     <div class="text-base font-bold text-sky-400">🤝 Partie nulle</div>
+                     <div class="text-[10px] text-slate-500">avec jeu parfait des deux côtés</div>
+                  </template>
+
+                  <!-- Heuristic advantage -->
+                  <template v-else-if="predictionResult.winner">
+                     <div class="text-sm font-bold"
+                        :class="predictionResult.winner === 1 ? 'text-red-300' : 'text-yellow-300'">
+                        Avantage {{ predictionResult.winner === 1 ? 'Rouge' : 'Jaune' }}
+                     </div>
+                     <div class="text-[10px] text-slate-500 leading-snug">
+                        Pas de victoire forcée détectée<br>à la profondeur {{ predictionResult.depth }}
+                     </div>
+                  </template>
+
+                  <!-- Balanced / unknown -->
+                  <template v-else>
+                     <div class="text-sm font-bold text-slate-300">⚖️ Position équilibrée</div>
+                     <div class="text-[10px] text-slate-500">profondeur {{ predictionResult.depth }}</div>
+                  </template>
+
+               </div>
             </div>
 
             <!-- ── 2 · Replay controls ─────────────────────────────── -->
@@ -274,6 +343,7 @@ import { useFileManagement } from '../composables/useFileManagement';
 import { useApi } from '../composables/useApi';
 import { useReplay } from '../composables/useReplay';
 import { useMinimax } from '../composables/useMinimax';
+import { useWinCheck } from '../composables/useWinCheck';
 
 const router = useRouter();
 
@@ -283,21 +353,25 @@ const gameStateStore = useGameStateStore();
 
 const { aiDepth, aiMode, boardSize, gameMode, startingPlayer, humanPlayer } = storeToRefs(gameSettingsStore);
 const { board, currentPlayer, gameStatus, winner, moveHistory, historyIndex, aiThinkingProgress, gameLogs, winningCells } = storeToRefs(gameStateStore);
-const { resetGame, addLog, setWinner, setWinningCells } = gameStateStore;
+const { resetGame, addLog, setWinner, setWinningCells, setGameStatus } = gameStateStore;
 
 // ── Composables ──────────────────────────────────────────────────────
 const { startGame } = useGame();
+const { revalidateBoard } = useWinCheck();
 const { download, save } = useFileManagement();
 const { savedGameToDatabase } = useApi();
 const { isReplaying, replaySpeed, startAutoReplay, stopAutoReplay, stepForward, stepBackward, goToStart, goToEnd } = useReplay();
-const { analyseAsync } = useMinimax();
+const { analyseAsync, predictAsync } = useMinimax();
 
 // ── Local state ──────────────────────────────────────────────────────
-const showQuitModal = ref(false);
+const showQuitModal  = ref(false);
 const suggestedCol   = ref(null);   // null | 0-indexed column
 const isSuggesting   = ref(false);
 const paintMode      = ref(false);
 const paintBrush     = ref(1);      // 1=Red, 2=Yellow, 0=Erase
+const isPredicting   = ref(false);
+const predictionResult = ref(null);
+const predictProgress  = ref(0);
 
 // ── Status banner ────────────────────────────────────────────────────
 const lastMoveBanner = computed(() => {
@@ -319,9 +393,39 @@ watch(gameStatus, (val) => {
    if (val !== 'playing') { suggestedCol.value = null; isSuggesting.value = false; }
 });
 
+// Clear prediction whenever the board changes (new move played)
+watch(() => board.value, () => { predictionResult.value = null; }, { deep: true });
+
 watch(winner, (val) => {
    if (val) addLog(`🏆 ${val === 1 ? 'Rouge' : 'Jaune'} a gagné la partie !`);
 });
+
+// ── Game prediction ("Prédire la partie") ────────────────────────────
+const computePrediction = async () => {
+   if (isPredicting.value) return;
+   isPredicting.value   = true;
+   predictionResult.value = null;
+   predictProgress.value  = 0;
+   try {
+      // Pass a plain array copy so reactive watchers aren't triggered during search
+      const boardCopy = board.value.map(r => [...r]);
+      const result = await predictAsync(boardCopy, currentPlayer.value, (p) => {
+         predictProgress.value = p;
+      });
+      predictionResult.value = result;
+      if (result.confident && result.winner && result.winner !== 0) {
+         const who = result.winner === 1 ? 'Rouge' : 'Jaune';
+         addLog(`🔮 Prédiction : ${who} gagne dans ${result.movesCount} coup(s) (profondeur ${result.depth}).`);
+      } else if (result.confident && result.winner === 0) {
+         addLog('🔮 Prédiction : partie nulle avec jeu parfait.');
+      } else {
+         const adv = result.winner === 1 ? 'Rouge' : result.winner === 2 ? 'Jaune' : 'aucun';
+         addLog(`🔮 Prédiction : avantage ${adv} — pas de victoire forcée à profondeur ${result.depth}.`);
+      }
+   } finally {
+      isPredicting.value = false;
+   }
+};
 
 // ── AI Suggestion ("IA jouerait") ────────────────────────────────────
 const computeSuggestion = async () => {
@@ -352,13 +456,15 @@ const switchMode = () => {
 const togglePaintMode = () => {
    paintMode.value = !paintMode.value;
    if (paintMode.value) {
-      if (typeof setWinner === 'function') setWinner(null);
-      else winner.value = null;
-      if (typeof setWinningCells === 'function') setWinningCells([]);
-      else winningCells.value = [];
+      // Entering paint mode: clear win state and unlock the board
+      setWinner(null);
+      setWinningCells([]);
+      setGameStatus('playing');
       suggestedCol.value = null;
       addLog('✏ Paint mode activé.');
    } else {
+      // Exiting paint mode: re-scan the whole board so win state is coherent
+      revalidateBoard();
       addLog('✏ Paint mode désactivé.');
    }
 };

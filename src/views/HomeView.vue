@@ -41,12 +41,11 @@
                🔍 Rejouer une partie BGA
             </button>
 
-            <!-- Database Button (admin only) -->
+            <!-- Database Button -->
             <button
-               v-if="isAdmin"
                @click="router.push('/database')"
                class="w-full bg-linear-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold text-xl py-4 px-8 rounded-xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-purple-500/30">
-               🗄️ Gérer la base de données
+               🗄️ Base de données
             </button>
 
             <NewGameSettingsModal v-if="isModalOpen" v-model="isModalOpen" @submit="startANewGame"/>
@@ -54,6 +53,24 @@
       </section>
 
       <SavedGameList :games="games" @load-game="loadGame" @delete-game="deleteGame" />
+
+      <!-- Database Section -->
+      <section class="max-w-md mx-auto mt-8">
+         <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+               <h2 class="text-lg font-bold text-white">🗄️ Base de données</h2>
+               <span class="text-xs text-slate-500">Parties serveur</span>
+            </div>
+            <p class="text-slate-400 text-sm mb-4">
+               Consultez toutes les parties enregistrées sur le serveur, les statistiques et les replays.
+            </p>
+            <button
+               @click="router.push('/database')"
+               class="w-full bg-linear-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:-translate-y-0.5">
+               Accéder à la base de données →
+            </button>
+         </div>
+      </section>
    </main>
 </template>
 

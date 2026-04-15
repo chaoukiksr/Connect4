@@ -25,8 +25,8 @@ export function useMinimax() {
 
   // TT entry flags (for alpha-beta bound type)
   const F_EXACT = 0;   // exact minimax value
-  const F_LOWER = 1;   // alpha-cutoff: stored score is a lower bound
-  const F_UPPER = 2;   // beta-cutoff:  stored score is an upper bound
+  const F_LOWER = 1;   // beta-cutoff:  stored score is a lower bound  (real score ≥ stored)
+  const F_UPPER = 2;   // alpha-cutoff: stored score is an upper bound (real score ≤ stored)
 
   // Positional column weights — standard 7-column board.
   // Column 3 (center) is most valuable; edges are least.
@@ -219,11 +219,13 @@ export function useMinimax() {
    * @param {Map}        tt       — transposition table (shared across the full search)
    * @param {number[]}   killers  — killers[depth] = column that last caused a β-cutoff
    * @param {number}     deadline — Date.now() value at which search must stop
+   * @param {{v:boolean}} aborted — shared flag; set to true on first timeout so callers
+   *                                can detect a tainted subtree and skip TT writes.
    * @returns {number} score from MAX_PLAYER's perspective
    */
-  const _minimax = (board, depth, isMax, alpha, beta, rows, cols, tt, killers, deadline) => {
-    // Time guard — returning 0 (neutral) signals ID to discard this depth's result
-    if (Date.now() >= deadline) return 0;
+  const _minimax = (board, depth, isMax, alpha, beta, rows, cols, tt, killers, deadline, aborted) => {
+    // Time guard — mark the whole subtree as tainted so callers skip TT stores
+    if (aborted.v || Date.now() >= deadline) { aborted.v = true; return 0; }
 
     // ── Transposition table lookup ─────────────────────────────────────────
     const key = boardKey(board);
@@ -266,9 +268,12 @@ export function useMinimax() {
         // Prefer faster wins: higher remaining depth = win found sooner from root
         score = isMax ? WIN + depth : -(WIN + depth);
       } else {
-        score = _minimax(board, depth - 1, !isMax, alpha, beta, rows, cols, tt, killers, deadline);
+        score = _minimax(board, depth - 1, !isMax, alpha, beta, rows, cols, tt, killers, deadline, aborted);
       }
       undo(board, row, col);
+
+      // If a child timed out, its score is meaningless — abandon this node too
+      if (aborted.v) break;
 
       if (isMax) {
         if (score > bestScore) { bestScore = score; bestMove = col; }
@@ -285,14 +290,18 @@ export function useMinimax() {
     }
 
     // ── TT store ──────────────────────────────────────────────────────────
-    let flag;
-    if      (bestScore <= origAlpha) flag = F_UPPER;   // failed-low
-    else if (bestScore >= beta)      flag = F_LOWER;   // failed-high
-    else                             flag = F_EXACT;
+    // Skip TT write if the search was aborted — the score is tainted by a
+    // timeout-zero from a child and would pollute future lookups.
+    if (!aborted.v) {
+      let flag;
+      if      (bestScore <= origAlpha) flag = F_UPPER;   // failed-low  (real ≤ bestScore)
+      else if (bestScore >= beta)      flag = F_LOWER;   // failed-high (real ≥ bestScore)
+      else                             flag = F_EXACT;
 
-    const prev = tt.get(key);
-    if (!prev || prev.depth <= depth) {
-      tt.set(key, { score: bestScore, depth, flag, bestMove });
+      const prev = tt.get(key);
+      if (!prev || prev.depth <= depth) {
+        tt.set(key, { score: bestScore, depth, flag, bestMove });
+      }
     }
 
     return bestScore;
@@ -364,6 +373,7 @@ export function useMinimax() {
       let alpha     = -(WIN + 1);
       const beta    = WIN + 1;
       let timedOut  = false;
+      const aborted = { v: false };
 
       // At each depth, put the must-block column first
       const iterMoves = [...allMoves];
@@ -382,9 +392,12 @@ export function useMinimax() {
         if (hasWon(board, row, col, MAX_PLAYER, rows, cols)) {
           score = WIN + depth;
         } else {
-          score = _minimax(board, depth - 1, false, alpha, beta, rows, cols, tt, killers, deadline);
+          score = _minimax(board, depth - 1, false, alpha, beta, rows, cols, tt, killers, deadline, aborted);
         }
         undo(board, row, col);
+
+        // _minimax timed out internally — score is tainted, discard this depth
+        if (aborted.v) { timedOut = true; break; }
 
         if (score > iterBest) { iterBest = score; iterMove = col; }
         if (iterBest > alpha) alpha = iterBest;
@@ -461,6 +474,7 @@ export function useMinimax() {
       let alpha    = -(WIN + 1);
       const beta   = WIN + 1;
       let timedOut = false;
+      const aborted = { v: false };
 
       const iterMoves = [...allMoves];
       if (mustBlock !== null) {
@@ -478,9 +492,11 @@ export function useMinimax() {
         if (hasWon(board, row, col, MAX_PLAYER, rows, cols)) {
           score = WIN + depth;
         } else {
-          score = _minimax(board, depth - 1, false, alpha, beta, rows, cols, tt, killers, deadline);
+          score = _minimax(board, depth - 1, false, alpha, beta, rows, cols, tt, killers, deadline, aborted);
         }
         undo(board, row, col);
+
+        if (aborted.v) { timedOut = true; break; }
 
         if (score > iterBest) { iterBest = score; iterMove = col; }
         if (iterBest > alpha) alpha = iterBest;
@@ -505,8 +521,9 @@ export function useMinimax() {
   /**
    * Single-pass analysis: returns { bestCol, scores[], bestScore }.
    * Used by the "IA jouerait" suggestion button.
-   * Shares the TT across all columns but does NOT share alpha
-   * so each column's score is an accurate bound, not a pruned estimate.
+   * Shares the TT and accumulates alpha across columns (standard alpha-beta root):
+   * non-best columns may get lower-bound estimates rather than exact scores,
+   * but the best column and its score are always accurate.
    */
   const analyseAsync = async (board, depth = 5, onProgress = null) => {
     const rows = board.length;
@@ -515,6 +532,7 @@ export function useMinimax() {
     const tt      = new Map();
     const killers = new Array(depth + 4).fill(null);
     const scores  = Array(cols).fill(null);
+    const aborted = { v: false };
 
     const center = Math.floor(cols / 2);
     const avail = [];
@@ -534,9 +552,12 @@ export function useMinimax() {
       if (hasWon(board, row, col, MAX_PLAYER, rows, cols)) {
         s = WIN + depth;
       } else {
-        s = _minimax(board, depth - 1, false, alpha, WIN + 1, rows, cols, tt, killers, deadline);
+        s = _minimax(board, depth - 1, false, alpha, WIN + 1, rows, cols, tt, killers, deadline, aborted);
       }
       undo(board, row, col);
+
+      // If the search timed out internally, remaining scores are unreliable
+      if (aborted.v) break;
 
       scores[col] = s;
       if (s > bestScore) { bestScore = s; bestCol = col; }
@@ -555,54 +576,244 @@ export function useMinimax() {
     return { bestCol, scores, bestScore };
   };
 
-  /** Synchronous column score computation (capped at depth for display speed). */
-  const getColumnScores = (board, depth = 5) => {
+  /** Synchronous column score computation (capped at depth for display speed).
+   *  @param {1|2} player — whose turn it is; scores are always from MAX_PLAYER perspective.
+   */
+  const getColumnScores = (board, depth = 5, player = MAX_PLAYER) => {
     const rows = board.length;
     const cols = board[0].length;
     const deadline = Date.now() + 1000;
     const tt      = new Map();
     const killers = new Array(depth + 4).fill(null);
+    const aborted = { v: false };
     const scores  = [];
 
     for (let col = 0; col < cols; col++) {
       if (board[0][col] !== EMPTY) { scores.push(null); continue; }
-      const row = drop(board, col, MAX_PLAYER, rows);
+      const row = drop(board, col, player, rows);
       let s;
-      if (hasWon(board, row, col, MAX_PLAYER, rows, cols)) {
-        s = WIN + depth;
+      if (hasWon(board, row, col, player, rows, cols)) {
+        // Immediate win: positive for AI, negative for human
+        s = player === MAX_PLAYER ? WIN + depth : -(WIN + depth);
       } else {
-        s = _minimax(board, depth - 1, false, -(WIN + 1), WIN + 1, rows, cols, tt, killers, deadline);
+        const isMaxNext = (player === MIN_PLAYER); // after player drops, the other player moves
+        s = _minimax(board, depth - 1, isMaxNext, -(WIN + 1), WIN + 1, rows, cols, tt, killers, deadline, aborted);
       }
       undo(board, row, col);
+      if (aborted.v) { scores.push(null); break; } // remaining columns are null-filled below
       scores.push(s);
     }
+    // Pad with nulls if we bailed early due to timeout
+    while (scores.length < cols) scores.push(null);
     return scores;
   };
 
-  /** Async version of getColumnScores — yields between columns to keep UI responsive. */
-  const getColumnScoresAsync = async (board, depth = 5) => {
+  /** Async version of getColumnScores — yields between columns to keep UI responsive.
+   *  @param {number} player  - the player whose move is being evaluated (1=human, 2=AI)
+   *  Scores are always expressed from MAX_PLAYER (AI=2) perspective:
+   *    positive = good for AI, negative = good for human.
+   */
+  const getColumnScoresAsync = async (board, depth = 5, player = MAX_PLAYER) => {
     const rows = board.length;
     const cols = board[0].length;
     const deadline = Date.now() + 1500;
     const tt      = new Map();
     const killers = new Array(depth + 4).fill(null);
+    const aborted = { v: false };
     const scores  = [];
 
     for (let col = 0; col < cols; col++) {
       if (board[0][col] !== EMPTY) { scores.push(null); continue; }
-      const row = drop(board, col, MAX_PLAYER, rows);
+      const row = drop(board, col, player, rows);
       let s;
-      if (hasWon(board, row, col, MAX_PLAYER, rows, cols)) {
-        s = WIN + depth;
+      if (hasWon(board, row, col, player, rows, cols)) {
+        // Immediate win: positive for AI, negative for human
+        s = player === MAX_PLAYER ? WIN + depth : -(WIN + depth);
       } else {
-        s = _minimax(board, depth - 1, false, -(WIN + 1), WIN + 1, rows, cols, tt, killers, deadline);
+        // After player drops, the OTHER player moves next
+        const isMaxNext = (player === MIN_PLAYER);
+        s = _minimax(board, depth - 1, isMaxNext, -(WIN + 1), WIN + 1, rows, cols, tt, killers, deadline, aborted);
       }
       undo(board, row, col);
+      if (aborted.v) { scores.push(null); break; } // remaining columns stay null
       scores.push(s);
       if (col % 2 === 0) await new Promise(r => setTimeout(r, 0));
     }
+    // Pad with nulls if we bailed early due to timeout
+    while (scores.length < cols) scores.push(null);
     return scores;
   };
 
-  return { getBestMove, getBestMoveAsync, getColumnScores, getColumnScoresAsync, analyseAsync };
+  /**
+   * Converts a minimax score to a prediction label from the given player's perspective.
+   * Scores are always from MAX_PLAYER (AI=2) perspective internally.
+   *
+   * @param {number|null} score        - minimax score (null = column full / invalid)
+   * @param {1|2}         currentPlayer - whose turn it is (1=human, 2=AI)
+   * @returns {'Victoire'|'Defaite'|'Nul'|'Incertain'|null}
+   */
+  const scoreToLabel = (score, currentPlayer = MAX_PLAYER) => {
+    if (score === null) return null;
+    if (currentPlayer === MAX_PLAYER) {
+      // AI's turn: positive score = AI winning
+      if (score >= WIN_CLAMP)  return 'Victoire';
+      if (score <= -WIN_CLAMP) return 'Defaite';
+      if (score === 0)         return 'Nul';
+      return 'Incertain';
+    } else {
+      // Human's turn: high AI score after human plays = bad for human
+      if (score <= -WIN_CLAMP) return 'Victoire';
+      if (score >= WIN_CLAMP)  return 'Defaite';
+      if (score === 0)         return 'Nul';
+      return 'Incertain';
+    }
+  };
+
+  // ─── Game outcome predictor ───────────────────────────────────────────────
+
+  /**
+   * Predicts the game outcome from the current board position.
+   *
+   * Uses iterative deepening minimax (up to 5-second budget) for either player.
+   * The WIN score encoding (WIN + remaining_depth) lets us recover the exact
+   * number of moves to forced win: movesCount = searchDepth - (|score| - WIN) + 1.
+   *
+   * @param {number[][]} board    — plain array snapshot (NOT the reactive store ref)
+   * @param {1|2}        player   — whose turn it is (1=Rouge, 2=Jaune/AI)
+   * @param {Function}  [onProgress] — optional callback(0–100)
+   * @returns {Promise<{
+   *   winner:     1|2|0|null,   // 1=Rouge, 2=Jaune, 0=draw, null=unknown
+   *   movesCount: number|null,  // moves until forced outcome (null if not confident)
+   *   confident:  boolean,      // true = forced by perfect play
+   *   depth:      number        // last completed search depth
+   * }>}
+   */
+  const predictAsync = async (board, player = MAX_PLAYER, onProgress = null) => {
+    const rows = board.length;
+    const cols = board[0].length;
+
+    // Count playable cells (upper bound on remaining moves)
+    let emptyCells = 0;
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (board[r][c] === EMPTY) emptyCells++;
+
+    if (emptyCells === 0) return { winner: 0, movesCount: 0, confident: true, depth: 0 };
+
+    const maxDepth = Math.min(emptyCells, 25);
+    const TIME_MS  = 5000;
+    const deadline = Date.now() + TIME_MS;
+    const tt       = new Map();
+    const killers  = new Array(maxDepth + 4).fill(null);
+
+    const center   = Math.floor(cols / 2);
+    const allMoves = [];
+    for (let c = 0; c < cols; c++) if (board[0][c] === EMPTY) allMoves.push(c);
+    allMoves.sort((a, b) => Math.abs(a - center) - Math.abs(b - center));
+
+    // ── 1-ply: immediate win for current player ──────────────────────────
+    for (const col of allMoves) {
+      const row = drop(board, col, player, rows);
+      if (row !== -1) {
+        if (hasWon(board, row, col, player, rows, cols)) {
+          undo(board, row, col);
+          return { winner: player, movesCount: 1, confident: true, depth: 1 };
+        }
+        undo(board, row, col);
+      }
+    }
+
+    let bestScore          = 0;   // safe neutral; only used if lastCompletedDepth stays 0
+    let lastCompletedDepth = 0;
+
+    // ── Iterative deepening ───────────────────────────────────────────────
+    for (let depth = 1; depth <= maxDepth; depth++) {
+      if (Date.now() >= deadline) break;
+
+      // Sentinel must be strictly beyond any reachable WIN+d score at this depth.
+      // WIN+depth is the largest win score possible at this search depth (immediate
+      // win at root). Using WIN+depth+1 guarantees any real score will update iterBest.
+      let iterBest = player === MAX_PLAYER ? -(WIN + depth + 1) : (WIN + depth + 1);
+      let alpha    = -(WIN + 1);
+      let beta     =   WIN + 1;
+      let timedOut = false;
+      const aborted = { v: false };
+
+      for (const col of allMoves) {
+        if (Date.now() >= deadline) { timedOut = true; break; }
+
+        const row = drop(board, col, player, rows);
+        if (row === -1) continue;
+
+        let s;
+        if (hasWon(board, row, col, player, rows, cols)) {
+          s = player === MAX_PLAYER ? WIN + depth : -(WIN + depth);
+        } else {
+          const isMaxNext = (player === MIN_PLAYER);
+          s = _minimax(board, depth - 1, isMaxNext, alpha, beta, rows, cols, tt, killers, deadline, aborted);
+        }
+        undo(board, row, col);
+
+        if (aborted.v) { timedOut = true; break; }
+
+        if (player === MAX_PLAYER) {
+          if (s > iterBest) iterBest = s;
+          if (iterBest > alpha) alpha = iterBest;
+        } else {
+          if (s < iterBest) iterBest = s;
+          if (iterBest < beta) beta = iterBest;
+        }
+        if (alpha >= beta) break;
+
+        // Short-circuit once ANY forced outcome is confirmed (either player).
+        // Must check Math.abs — opponent can have a forced win too (positive score
+        // when it's MIN's turn, negative when it's MAX's turn).
+        if (Math.abs(iterBest) >= WIN_CLAMP) break;
+      }
+
+      if (!timedOut) {
+        bestScore          = iterBest;
+        lastCompletedDepth = depth;
+      }
+
+      if (onProgress) onProgress(Math.round((depth / maxDepth) * 100));
+
+      // Stop early once ANY forced outcome is confirmed at this depth
+      if (Math.abs(bestScore) >= WIN_CLAMP) break;
+
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    if (lastCompletedDepth === 0) {
+      return { winner: null, movesCount: null, confident: false, depth: 0 };
+    }
+
+    const absScore = Math.abs(bestScore);
+    const isForced = absScore >= WIN_CLAMP;
+
+    if (isForced) {
+      // Score encoding: score = WIN + remaining_depth_at_win.
+      // totalMoves (from current position) = searchDepth - remainingDepthAtWin + 1.
+      // The user sees "Jaune gagne dans N coups" as N moves *by Jaune*, not total moves.
+      //   If winner == current player:  winner plays moves 1, 3, 5, … → ceil(total/2)
+      //   If winner == opponent:        winner plays moves 2, 4, 6, … → floor(total/2)
+      const winnerPlayer        = bestScore > 0 ? MAX_PLAYER : MIN_PLAYER;
+      const remainingDepthAtWin = absScore - WIN;
+      const totalMoves          = Math.max(1, lastCompletedDepth - remainingDepthAtWin + 1);
+      const winnerMoves         = winnerPlayer === player
+        ? Math.ceil(totalMoves / 2)
+        : Math.floor(totalMoves / 2);
+      return { winner: winnerPlayer, movesCount: Math.max(1, winnerMoves), confident: true, depth: lastCompletedDepth };
+    }
+
+    // Not a forced outcome — return heuristic guess
+    let winnerGuess;
+    if      (bestScore >  200) winnerGuess = MAX_PLAYER;
+    else if (bestScore < -200) winnerGuess = MIN_PLAYER;
+    else                       winnerGuess = 0;
+
+    return { winner: winnerGuess, movesCount: null, confident: false, depth: lastCompletedDepth };
+  };
+
+  return { getBestMove, getBestMoveAsync, getColumnScores, getColumnScoresAsync, analyseAsync, scoreToLabel, predictAsync };
 }

@@ -94,5 +94,31 @@ export function useWinCheck() {
     }
   };
 
-  return { checkProbableWin };
+  // Full board scan used after paint mode exits to revalidate win state.
+  const revalidateBoard = () => {
+    const rows = boardSize.value.rows;
+    const cols = boardSize.value.cols;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const player = board.value[r][c];
+        if (!player) continue;
+        const win =
+          horizontalCheck(r, c, player) ||
+          verticalCheck(r, c, player) ||
+          diagonalCheck(r, c, player);
+        if (win) {
+          setWinningCells(win);
+          setWinner(player);
+          setGameStatus("finished");
+          return;
+        }
+      }
+    }
+    // No 4-in-a-row found — clear stale win state and let the game continue
+    setWinningCells([]);
+    setWinner(null);
+    setGameStatus("playing");
+  };
+
+  return { checkProbableWin, revalidateBoard };
 }
