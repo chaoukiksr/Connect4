@@ -38,18 +38,16 @@ export function useGame() {
     if (!isCurrentPlayerAI()) {
       setAiThinkingProgress(0);
     }
-//Parcourt la colonne de bas en haut.
+
     for (let r = boardSize.value.rows - 1; r >= 0; r--) {
-      //Place le pion.
       if (board.value[r][col] === 0) {
         board.value[r][col] = currentPlayer.value;
-        //ajout le coup a lhistorique
         addMove(r, col, currentPlayer.value);
         addLog(`${currentPlayer.value === 1 ? '🔴 Rouge' : '🟡 Jaune'} joue en colonne ${col + 1}`);
         checkProbableWin(r, col, currentPlayer.value);
-//Change de joueur.
+
         currentPlayer.value = currentPlayer.value === 1 ? 2 : 1;
-//si cest le tour de l'AI
+
         if (gameStatus.value === "playing" && isCurrentPlayerAI()) {
           triggerAIMove(async () => {
             setAiThinkingProgress(0);
