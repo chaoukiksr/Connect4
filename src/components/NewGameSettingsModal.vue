@@ -157,12 +157,12 @@ const formData = reactive({
   humanPlayer: 1,     // 1 = human plays Red, 2 = human plays Yellow
 
   // grille par défaut (Connect 4 classique)
-  rows: 6,
-  columns: 7,
+  rows: 9,
+  columns: 9,
 
   aiMode: "minimax",
-  aiDepth: 5,
-  mlSimulations: 200
+  aiDepth: 10,
+  mlSimulations: 800
 })
 
 /* functions */

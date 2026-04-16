@@ -16,8 +16,55 @@ export function useGame() {
   const { addMove, setAiThinkingProgress, addLog } = gameStateStore;
   const {moveHistory} = storeToRefs(gameStateStore);
   const { checkProbableWin } = useWinCheck();
-  const { getBestMove, getBestMoveAsync } = useMinimax();
+  const { getBestMoveAsync } = useMinimax();
   const { getBestMoveAsync: getMlMoveAsync } = useMlAi();
+
+  const isClassicBoard = () => boardSize.value.rows === 6 && boardSize.value.cols === 7;
+
+  const toMinimaxPerspectiveBoard = (sourceBoard, aiPlayer) => {
+    // useMinimax is currently coded with MAX_PLAYER=2 and MIN_PLAYER=1.
+    // If AI plays as player 1, swap tokens so minimax still reasons correctly.
+    if (aiPlayer === 2) {
+      return sourceBoard.map((row) => row.slice());
+    }
+
+    return sourceBoard.map((row) =>
+      row.map((cell) => {
+        if (cell === 1) return 2;
+        if (cell === 2) return 1;
+        return 0;
+      })
+    );
+  };
+
+  const computeMinimaxMove = async () => {
+    const boardForSearch = toMinimaxPerspectiveBoard(board.value, currentPlayer.value);
+    return getBestMoveAsync(boardForSearch, aiDepth.value, (progress) => {
+      setAiThinkingProgress(progress);
+    });
+  };
+
+  const computeAiMove = async () => {
+    setAiThinkingProgress(0);
+
+    if (aiMode.value === 'ml') {
+      if (!isClassicBoard()) {
+        addLog('⚠ ML supporte uniquement la grille 6x7. Bascule sur Minimax.');
+        return computeMinimaxMove();
+      }
+
+      try {
+        return await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
+          setAiThinkingProgress(progress);
+        });
+      } catch (err) {
+        addLog(`⚠ ML indisponible (${err.message}). Bascule sur Minimax.`);
+        return computeMinimaxMove();
+      }
+    }
+
+    return computeMinimaxMove();
+  };
 
   const isColAvailable = (col) => board.value[0][col] === 0;
 
@@ -50,24 +97,7 @@ export function useGame() {
 
         if (gameStatus.value === "playing" && isCurrentPlayerAI()) {
           triggerAIMove(async () => {
-            setAiThinkingProgress(0);
-            let aiCol;
-            if (aiMode.value === 'ml') {
-              try {
-                aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
-                  setAiThinkingProgress(progress);
-                });
-              } catch (err) {
-                addLog(`⚠ ML indisponible (${err.message}). Bascule sur Minimax.`);
-                aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
-                  setAiThinkingProgress(progress);
-                });
-              }
-            } else {
-              aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
-                setAiThinkingProgress(progress);
-              });
-            }
+            const aiCol = await computeAiMove();
             if (aiCol !== null) fillCol(aiCol);
           });
         }
@@ -81,24 +111,7 @@ export function useGame() {
 
     if (isCurrentPlayerAI()) {
       triggerAIMove(async () => {
-        setAiThinkingProgress(0);
-        let aiCol;
-        if (aiMode.value === 'ml') {
-          try {
-            aiCol = await getMlMoveAsync(board.value, currentPlayer.value, mlSimulations.value, (progress) => {
-              setAiThinkingProgress(progress);
-            });
-          } catch (err) {
-            addLog(`⚠ ML indisponible (${err.message}). Bascule sur Minimax.`);
-            aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
-              setAiThinkingProgress(progress);
-            });
-          }
-        } else {
-          aiCol = await getBestMoveAsync(board.value, aiDepth.value, (progress) => {
-            setAiThinkingProgress(progress);
-          });
-        }
+        const aiCol = await computeAiMove();
         if (aiCol !== null) fillCol(aiCol);
       });
     }

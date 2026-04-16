@@ -340,29 +340,49 @@ export function useMinimax() {
 
     if (allMoves.length === 0) return null;
 
-    // ── 1-ply: take immediate win ────────────────────────────────────────
-    for (const col of allMoves) {
-      const row = drop(board, col, MAX_PLAYER, rows);
-      if (row !== -1) {
-        const win = hasWon(board, row, col, MAX_PLAYER, rows, cols);
+    const immediateWinningCols = (player) => {
+      const wins = [];
+      for (const col of allMoves) {
+        const row = drop(board, col, player, rows);
+        if (row === -1) continue;
+        const win = hasWon(board, row, col, player, rows, cols);
         undo(board, row, col);
-        if (win) { if (onProgress) onProgress(100); return col; }
+        if (win) wins.push(col);
       }
+      return wins;
+    };
+
+    // ── 1-ply: take immediate win ────────────────────────────────────────
+    const winningNow = immediateWinningCols(MAX_PLAYER);
+    if (winningNow.length > 0) {
+      if (onProgress) onProgress(100);
+      return winningNow[0];
     }
 
-    // ── 1-ply: block opponent's immediate win ────────────────────────────
-    let mustBlock = null;
-    for (const col of allMoves) {
-      const row = drop(board, col, MIN_PLAYER, rows);
-      if (row !== -1) {
-        const win = hasWon(board, row, col, MIN_PLAYER, rows, cols);
+    // ── Forced defense: only explore moves that remove all immediate losses ─
+    const oppWinsNow = immediateWinningCols(MIN_PLAYER);
+    let forcedMoves = [...allMoves];
+    if (oppWinsNow.length > 0) {
+      const blockers = allMoves.filter((col) => {
+        const row = drop(board, col, MAX_PLAYER, rows);
+        if (row === -1) return false;
+        const oppWinsAfter = immediateWinningCols(MIN_PLAYER);
         undo(board, row, col);
-        if (win) { mustBlock = col; break; }
+        return oppWinsAfter.length === 0;
+      });
+
+      if (blockers.length === 1) {
+        if (onProgress) onProgress(100);
+        return blockers[0];
+      }
+
+      if (blockers.length > 0) {
+        forcedMoves = blockers;
       }
     }
 
     // ── Iterative deepening ──────────────────────────────────────────────
-    let bestMove  = mustBlock ?? allMoves[0];
+    let bestMove  = forcedMoves[0] ?? allMoves[0];
     let bestScore = -(WIN + 1);
 
     for (let depth = 1; depth <= maxDepth; depth++) {
@@ -376,11 +396,7 @@ export function useMinimax() {
       const aborted = { v: false };
 
       // At each depth, put the must-block column first
-      const iterMoves = [...allMoves];
-      if (mustBlock !== null) {
-        const mi = iterMoves.indexOf(mustBlock);
-        if (mi > 0) { iterMoves.splice(mi, 1); iterMoves.unshift(mustBlock); }
-      }
+      const iterMoves = [...forcedMoves];
 
       for (const col of iterMoves) {
         if (Date.now() >= deadline) { timedOut = true; break; }
@@ -442,28 +458,48 @@ export function useMinimax() {
 
     if (allMoves.length === 0) return null;
 
+    const immediateWinningCols = (player) => {
+      const wins = [];
+      for (const col of allMoves) {
+        const row = drop(board, col, player, rows);
+        if (row === -1) continue;
+        const win = hasWon(board, row, col, player, rows, cols);
+        undo(board, row, col);
+        if (win) wins.push(col);
+      }
+      return wins;
+    };
+
     // 1-ply win
-    for (const col of allMoves) {
-      const row = drop(board, col, MAX_PLAYER, rows);
-      if (row !== -1) {
-        const win = hasWon(board, row, col, MAX_PLAYER, rows, cols);
+    const winningNow = immediateWinningCols(MAX_PLAYER);
+    if (winningNow.length > 0) {
+      if (onProgress) onProgress(100);
+      return winningNow[0];
+    }
+
+    // Forced defense
+    const oppWinsNow = immediateWinningCols(MIN_PLAYER);
+    let forcedMoves = [...allMoves];
+    if (oppWinsNow.length > 0) {
+      const blockers = allMoves.filter((col) => {
+        const row = drop(board, col, MAX_PLAYER, rows);
+        if (row === -1) return false;
+        const oppWinsAfter = immediateWinningCols(MIN_PLAYER);
         undo(board, row, col);
-        if (win) { if (onProgress) onProgress(100); return col; }
+        return oppWinsAfter.length === 0;
+      });
+
+      if (blockers.length === 1) {
+        if (onProgress) onProgress(100);
+        return blockers[0];
+      }
+
+      if (blockers.length > 0) {
+        forcedMoves = blockers;
       }
     }
 
-    // 1-ply must-block
-    let mustBlock = null;
-    for (const col of allMoves) {
-      const row = drop(board, col, MIN_PLAYER, rows);
-      if (row !== -1) {
-        const win = hasWon(board, row, col, MIN_PLAYER, rows, cols);
-        undo(board, row, col);
-        if (win) { mustBlock = col; break; }
-      }
-    }
-
-    let bestMove  = mustBlock ?? allMoves[0];
+    let bestMove  = forcedMoves[0] ?? allMoves[0];
     let bestScore = -(WIN + 1);
 
     for (let depth = 1; depth <= maxDepth; depth++) {
@@ -476,11 +512,7 @@ export function useMinimax() {
       let timedOut = false;
       const aborted = { v: false };
 
-      const iterMoves = [...allMoves];
-      if (mustBlock !== null) {
-        const mi = iterMoves.indexOf(mustBlock);
-        if (mi > 0) { iterMoves.splice(mi, 1); iterMoves.unshift(mustBlock); }
-      }
+      const iterMoves = [...forcedMoves];
 
       for (const col of iterMoves) {
         if (Date.now() >= deadline) { timedOut = true; break; }

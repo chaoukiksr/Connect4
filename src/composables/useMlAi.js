@@ -133,7 +133,7 @@ export function useMlAi() {
    */
   async function getColumnScoresAsync(board, currentPlayer, simulations = 150) {
     const analysis = await analyzeWithML(board, currentPlayer, simulations);
-    if (!analysis || !analysis.visitCounts) return new Array(7).fill(null);
+    if (!analysis || !analysis.visitCounts) return new Array(board[0].length).fill(null);
 
     const visits = analysis.visitCounts;
     const maxVisit = Math.max(...visits.filter(v => v > 0), 1);
